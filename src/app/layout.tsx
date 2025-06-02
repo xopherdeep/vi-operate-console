@@ -6,6 +6,9 @@ import '@fontsource/poppins/600.css';
 import '@fontsource/poppins/700.css';
 
 import { Analytics } from '@vercel/analytics/react';
+import { QueryProvider } from '@/providers/query-provider';
+import WebVitalsTracker from '@/components/web-vitals-tracker';
+import HydrationBoundary from '@/components/hydration-boundary';
 
 export const metadata = {
   title: 'VI Operate Console',
@@ -20,10 +23,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="flex min-h-screen w-full flex-col font-poppins">
-        {children}
+      <body 
+        className="flex min-h-screen w-full flex-col font-poppins"
+        suppressHydrationWarning={true}
+      >
+        <HydrationBoundary>
+          <QueryProvider>
+            {children}
+          </QueryProvider>
+          <WebVitalsTracker />
+          <Analytics />
+        </HydrationBoundary>
       </body>
-      <Analytics />
     </html>
   );
 }

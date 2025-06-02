@@ -1,0 +1,439 @@
+---
+# Implementation Plan for Project Improvements
+# Last Updated: May 30, 2025 (Current)
+
+title: "Project Optimization Implementation Plan"
+description: "A comprehensive plan for improving code organization, performance, and developer experience"
+
+# Current Progress
+status:
+  completed: 
+    - "Fast Refresh configuration setup"
+    - "Fast Refresh utilities implementation"
+    - "Developer tools page creation"
+    - "Add bundle analyzer setup"
+    - "Set up path aliases"
+    - "Initial testing infrastructure"
+  in_progress:
+    - "Component organization restructuring"
+    - "Performance optimizations"
+    - "React Server Components implementation"
+  planned:
+    - "Feature directory creation"
+    - "Testing improvements and test coverage"
+    - "Component documentation"
+    - "Implement Suspense boundaries"
+    - "ESLint rules enhancement"
+
+# Implementation Phases
+phases:
+  - name: "Phase 1: Immediate Gains"
+    status: "in-progress"
+    tasks:
+      - name: "Component reorganization"
+        description: "Create a more consistent component structure"
+        priority: "high"
+        status: "in-progress"
+        subtasks:
+          - name: "Move components to feature-focused organization"
+            details: "Create /components/features directory and move feature-specific components"
+            status: "pending"
+          - name: "Standardize common components"
+            details: "Consolidate shared components in /components/common"
+            status: "completed"
+          - name: "Reorganize UI patterns"
+            details: "Move UX patterns from views and ux folders to /components/patterns"
+            status: "completed"
+          - name: "Update imports across codebase"
+            details: "Fix component imports after restructuring"
+            status: "in-progress"
+        assignee: "dev-team"
+        deadline: "2025-06-10" # Extended deadline
+        
+      - name: "Add bundle analyzer"
+        description: "Identify large dependencies for optimization"
+        priority: "medium"
+        status: "completed"
+        details: >
+          Add @next/bundle-analyzer to project and configure in next.config.ts
+          with threshold warnings for bundle sizes.
+        commands:
+          - "pnpm add -D @next/bundle-analyzer"
+        config: |
+          // In next.config.ts
+          const withBundleAnalyzer = require('@next/bundle-analyzer')({
+            enabled: process.env.ANALYZE === 'true',
+          });
+          module.exports = withBundleAnalyzer({
+            // existing config
+          });
+        completed_date: "2025-05-01"
+        
+      - name: "Set up path aliases"
+        description: "Add granular path aliases for easier imports"
+        priority: "medium"
+        status: "completed"
+        details: >
+          Update tsconfig.json with more specific path aliases for components, 
+          hooks, and utilities to improve developer experience
+        config: |
+          // In tsconfig.json
+          {
+            "compilerOptions": {
+              "paths": {
+                "@/components/*": ["./src/components/*"],
+                "@/features/*": ["./src/components/features/*"],
+                "@/patterns/*": ["./src/components/patterns/*"],
+                "@/hooks/*": ["./src/hooks/*"],
+                "@/lib/*": ["./src/lib/*"],
+                "@/api/*": ["./src/lib/api/*"],
+                "@/utils/*": ["./src/lib/utils/*"]
+              }
+            }
+          }
+        completed_date: "2025-05-01"
+        
+      - name: "Fast Refresh optimizations"
+        description: "Implement Fast Refresh enhancements for better development experience"
+        priority: "high"
+        status: "completed"
+        details: >
+          Set up React Fast Refresh configuration with Turbopack and add utilities to
+          preserve component state during refresh cycles.
+        subtasks:
+          - name: "Update next.config.ts"
+            status: "completed"
+            details: "Configure turbopack options correctly"
+          - name: "Create Fast Refresh utilities"
+            status: "completed"
+            details: "Implement utilities to preserve state and monitor performance"
+          - name: "Add developer tools page"
+            status: "completed"
+            details: "Create demo page to showcase Fast Refresh features"
+        reference:
+          files:
+            - "/src/lib/utils/fast-refresh.ts"
+            - "/src/hooks/useFastRefreshState.ts"
+            - "/src/lib/utils/refresh-monitor.ts"
+            - "/src/app/dev/tools/fast-refresh/page.tsx"
+        deadline: "2025-04-25"
+        
+  - name: "Phase 2: Performance Focus"
+    status: "in-progress"
+    tasks:
+      - name: "Implement component-level code splitting"
+        description: "Extend dynamic imports to more large components"
+        priority: "high"
+        status: "in-progress"
+        details: >
+          Identify large components and convert them to use dynamic imports
+          to reduce initial JavaScript bundle size.
+        examples:
+          - |
+            // Before
+            import LargeComponent from './LargeComponent';
+            
+            // After
+            import dynamic from 'next/dynamic';
+            const LargeComponent = dynamic(() => import('./LargeComponent'), {
+              loading: () => <LoadingPlaceholder />
+            });
+        target_components:
+          - "DashboardDetail components"
+          - "Report visualization components"
+          - "Table components with complex interactions"
+        deadline: "2025-06-15" # Extended deadline
+        
+      - name: "Optimize image loading"
+        description: "Improve image loading performance"
+        priority: "medium"
+        status: "pending"
+        subtasks:
+          - name: "Add priority loading for above-the-fold images"
+            details: "Use priority prop for critical images"
+            status: "pending"
+          - name: "Implement next/image with proper sizing"
+            details: "Convert all images to next/image with explicit dimensions"
+            status: "pending"
+          - name: "Add proper alt text and loading strategies"
+            details: "Audit image accessibility and loading behavior"
+            status: "pending"
+        deadline: "2025-06-20" # Extended deadline
+        
+      - name: "Implement React Server Components"
+        description: "Move data fetching to server components"
+        priority: "high"
+        status: "in-progress"
+        details: >
+          Identify components that perform data fetching and convert them to 
+          server components where possible to reduce client-side JavaScript.
+        progress: "198 client components ('use client' directives) identified"
+        target_components:
+          - "Dashboard list and grid components"
+          - "Data source components"
+          - "Static content sections"
+        deadline: "2025-06-30" # Extended deadline
+        
+      - name: "Add strategic Suspense boundaries"
+        description: "Improve initial load time with Suspense"
+        priority: "medium"
+        details: >
+          Wrap non-critical UI sections in Suspense to improve initial page load speed
+          and user experience. Implement error boundaries for better error handling.
+        example: |
+          import { Suspense } from 'react';
+          
+          export default function Page() {
+            return (
+              <main>
+                <CriticalContent />
+                <Suspense fallback={<LoadingSkeleton />}>
+                  <NonCriticalSection />
+                </Suspense>
+              </main>
+            );
+          }
+        target_sections:
+          - "Dashboard secondary widgets"
+          - "Related content sections"
+          - "Secondary navigation elements"
+        deadline: "2025-06-15"
+
+      - name: "Convert layout components to server components"
+        description: "Reduce client JS bundle with server components"
+        priority: "medium"
+        details: >
+          Identify layout components that don't require client interactivity
+          and convert them to server components.
+        target_components:
+          - "Page layout components"
+          - "Static layout components"
+          - "Navigation structure components"
+        deadline: "2025-06-20"
+
+  - name: "Phase 3: Developer Experience"
+    status: "planned"
+    tasks:
+      - name: "Enhance ESLint rules"
+        description: "Add ESLint rules for component organization"
+        priority: "high" # Increased priority
+        status: "pending"
+        details: >
+          Create and configure ESLint rules to enforce the new component structure
+          and coding standards. This has become more important as the component
+          structure evolves to ensure consistency.
+        packages:
+          - "eslint-plugin-react"
+          - "eslint-plugin-react-hooks"
+          - "eslint-plugin-import"
+        config: |
+          // .eslintrc.js
+          module.exports = {
+            // Add rules for component organization
+            rules: {
+              'import/no-restricted-paths': [
+                'error',
+                {
+                  zones: [
+                    { 
+                      target: './src/components/features/**/*', 
+                      from: './src/components/ui', 
+                      message: 'Import UI components via @/components/ui instead' 
+                    }
+                    // Add more path restrictions here
+                  ]
+                }
+              ]
+            }
+          }
+        deadline: "2025-07-01"
+
+      - name: "Standardize props interfaces"
+        description: "Create shared props type files"
+        priority: "medium"
+        details: >
+          Create standardized prop interfaces for component types and implement
+          consistent prop patterns across the application.
+        example: |
+          // src/types/component-props.ts
+          export interface CardProps {
+            title: string;
+            description?: string;
+            className?: string;
+            children: React.ReactNode;
+          }
+          
+          export interface ButtonProps extends React.ComponentProps<'button'> {
+            variant?: 'default' | 'outline' | 'ghost' | 'link';
+            size?: 'default' | 'sm' | 'lg';
+          }
+        target_components:
+          - "All UI components"
+          - "Pattern components"
+          - "Layout components"
+        deadline: "2025-07-15"
+
+      - name: "Add component documentation"
+        description: "Improve Storybook setup with more documentation"
+        priority: "low"
+        subtasks:
+          - name: "Add more comprehensive component stories"
+            details: "Create stories for all component variations"
+          - name: "Add accessibility documentation"
+            details: "Document a11y considerations for components"
+          - name: "Create component usage guidelines"
+            details: "Add documentation for when to use each component"
+        deadline: "2025-07-30"
+
+      - name: "Implement testing strategy"
+        description: "Add unit and integration tests"
+        priority: "high"
+        status: "in-progress"
+        details: >
+          Create a comprehensive testing strategy using Vitest for unit tests
+          and Playwright for end-to-end tests.
+        subtasks:
+          - name: "Set up testing infrastructure"
+            details: "Configure testing tools and scripts"
+            status: "completed"
+          - name: "Create test templates"
+            details: "Create reusable test patterns for components"
+            status: "pending"
+          - name: "Implement core component tests"
+            details: "Add tests for critical UI components"
+            status: "pending"
+          - name: "Add integration tests for key flows"
+            details: "Test critical user journeys"
+            status: "pending"
+        packages:
+          - "vitest"
+          - "@testing-library/react"
+          - "playwright"
+        commands:
+          - "pnpm test:unit"
+          - "pnpm test:e2e"
+        deadline: "2025-08-15"
+
+# UI Component Optimization
+component_optimizations:
+  calendar:
+    description: "Optimize Calendar component rendering"
+    issues:
+      - "Heavy re-renders when date selection changes"
+      - "Lack of memoization for internal functions"
+    solutions:
+      - name: "Apply useFastRefreshState for development"
+        details: "Use the Fast Refresh state preservation hook during development"
+      - name: "Memoize render-intensive components"
+        details: "Apply React.memo to prevent unnecessary re-renders"
+      - name: "Implement Virtualization for large date ranges"
+        details: "Use virtualization for calendars with many months"
+    implementation_example: |
+      // In calendar.tsx
+      import { useFastRefreshState } from '@/lib/utils/fast-refresh';
+      
+      const Calendar = React.memo(function Calendar({
+        className,
+        classNames,
+        showOutsideDays = true,
+        ...props
+      }: React.ComponentProps<typeof DayPicker>) {
+        // State will persist during development Fast Refresh
+        const [currentMonth, setCurrentMonth] = useFastRefreshState(
+          new Date(),
+          'calendar-current-month'
+        );
+        
+        // Memoize handlers to prevent unnecessary re-renders
+        const handleMonthChange = React.useCallback((month) => {
+          setCurrentMonth(month);
+        }, [setCurrentMonth]);
+        
+        // ...rest of the component
+      });
+
+  data_table:
+    description: "Optimize data table rendering performance"
+    issues:
+      - "Slow rendering with large datasets"
+      - "Complex column configurations cause excessive re-renders"
+    solutions:
+      - "Use virtualized rows for large datasets"
+      - "Memoize column definitions"
+      - "Implement pagination strategies"
+    
+  form_components:
+    description: "Optimize form component performance"
+    issues:
+      - "Input components cause excessive re-renders"
+      - "Form validation triggers full form re-renders"
+    solutions:
+      - "Implement controlled components with memoization"
+      - "Use form context to prevent unnecessary re-renders"
+      - "Split large forms into field-set components"
+
+# Next steps for performance monitoring
+performance_monitoring:
+  metrics:
+    - name: "First Contentful Paint (FCP)"
+      goal: "< 1.0s"
+      status: "in-progress"
+    - name: "Largest Contentful Paint (LCP)"
+      goal: "< 2.5s"
+      status: "needs improvement"
+    - name: "Total Blocking Time (TBT)"
+      goal: "< 200ms"
+      status: "needs improvement"
+    - name: "Cumulative Layout Shift (CLS)"
+      goal: "< 0.1"
+      status: "on target"
+  tools:
+    - name: "Lighthouse CI"
+      setup: "Add to CI/CD pipeline"
+      status: "pending"
+    - name: "Web Vitals tracking"
+      setup: "Implement in production"
+      status: "completed"
+      notes: "Implementation found in src/components/common/web-vitals-tracker.tsx"
+    - name: "Performance budget"
+      setup: "Configure size limits for key bundles"
+      status: "pending"
+      next_steps: "Use configured bundle analyzer to establish baseline metrics"
+
+# Technical Debt Tracking
+technical_debt:
+  - name: "Component duplication between _common and common directories"
+    priority: "high"
+    description: "Resolve the duplication between legacy _common directory and newer common directory"
+    resolution: "Migrate all components to the new structure and remove the _common directory"
+    deadline: "2025-06-15"
+  
+  - name: "Inconsistent use of component imports"
+    priority: "medium"
+    description: "Some components are imported directly, others via index files or path aliases"
+    resolution: "Standardize on path aliases @/components/* format for all imports"
+    deadline: "2025-06-20"
+  
+  - name: "Client components that could be server components"
+    priority: "high"
+    description: "Many components have 'use client' directives but might not need client-side interactivity"
+    resolution: "Audit all components with 'use client' directive and convert where possible"
+    deadline: "2025-07-01"
+
+# Immediate Priority Items
+immediate_priorities:
+  - "Create features directory and begin component migration"
+  - "Complete component reorganization to improve code organization and maintainability"
+  - "Continue React Server Components implementation to reduce client-side JavaScript"
+  - "Implement more Suspense boundaries for better UX during loading"
+
+# Additional notes
+notes:
+  - "Regular performance audits should be scheduled bi-weekly"
+  - "Component optimization should focus on high-traffic pages first"
+  - "Consider implementing micro-frontends for very large features in the future"
+  - "Investigate server components for data-heavy visualizations"
+  - "Review third-party dependencies quarterly for removal opportunities"
+  - "Focus on creating a /features directory for better component organization"
+  - "Complete component reorganization by June 15, 2025"
+  - "Next performance audit scheduled for June 15, 2025"

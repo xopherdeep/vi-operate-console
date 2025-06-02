@@ -10,19 +10,19 @@ import {
 } from 'lucide-react';
 
 // UI Components
-import { Button } from '@/components/_common/ui/button';
-import { Badge } from '@/components/_common/ui/badge';
-import { Label } from '@/components/_common/ui/label';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Label } from '@/ui/label';
 import { 
   Card, 
   CardHeader, 
   CardContent,
   CardTitle 
-} from '@/components/_common/ui/card';
+} from '@/ui/card'
 import { 
-  RadioGroup, 
-  RadioGroupItem 
-} from '@/components/_common/ui/radio-group';
+  RadioGroup,
+  RadioGroupItem
+} from '@/ui/radio-group';
 import {
   Sheet,
   SheetContent,
@@ -30,7 +30,7 @@ import {
   SheetTitle,
   SheetFooter,
   SheetClose
-} from '@/components/_common/ui/sheet';
+} from '@/ui/sheet';
 
 interface AutomationSheetProps {
   open: boolean;
@@ -41,20 +41,22 @@ interface AutomationSheetProps {
     source: string;
     destination: string;
   };
+  selectedNode?: any;
 }
 
 export default function AutomationSheet({
   open,
   onOpenChange,
   userPrompt,
-  activeAutomation
+  activeAutomation,
+  selectedNode
 }: AutomationSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md md:max-w-lg lg:max-w-xl overflow-y-auto p-0">
         <SheetHeader className="p-6 border-b sticky top-0 bg-white z-10">
           <SheetTitle className="text-lg font-bold flex items-center justify-between">
-            <span>Configure Automation</span>
+            <span>{selectedNode ? 'Configure Node' : 'Configure Automation'}</span>
             <SheetClose asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <XIcon className="h-4 w-4" />
@@ -201,8 +203,10 @@ export default function AutomationSheet({
           <SheetClose asChild>
             <Button variant="outline">Cancel</Button>
           </SheetClose>
-          <Button className="w-full sm:w-auto flex justify-between items-center gap-2 bg-purple-600 hover:bg-purple-700">
-            <span>Save and create automation</span>
+          <Button 
+            className="w-full sm:w-auto flex justify-between items-center gap-2 bg-purple-600 hover:bg-purple-700"
+          >
+            <span>{selectedNode ? 'Apply Changes' : 'Save Configuration'}</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </SheetFooter>

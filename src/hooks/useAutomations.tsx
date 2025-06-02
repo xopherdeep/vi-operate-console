@@ -5,7 +5,7 @@ import {
   DataList,
   EventsList,
   WorkflowsList
-} from '@/app/console/automations/lists';
+} from '@/app/console/automations/_common/lists';
 import { automationTabsMockData } from '@/lib/mock-data';
 import { AutomationTab } from '@/types/automation';
 import React from 'react';

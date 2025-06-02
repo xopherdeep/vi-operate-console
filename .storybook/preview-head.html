@@ -1,0 +1,49 @@
+<!-- This adds your project's compiled CSS directly into Storybook's head -->
+<link rel="stylesheet" href="../src/styles/_globals.css" />
+<link rel="stylesheet" href="../src/styles/base.css" />
+<link rel="stylesheet" href="../src/styles/components.css" />
+<link rel="stylesheet" href="../src/styles/theme.css" />
+<link rel="stylesheet" href="../src/styles/utilities.css" />
+<link rel="stylesheet" href="../src/styles/animations.css" />
+
+<!-- Load fonts -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" />
+
+<style>
+  /* These are temporary style overrides to fix specific issues with Tailwind CSS v4 in Storybook */
+  .border-border {
+    border-color: var(--border);
+  }
+  
+  @media (min-width: 640px) {
+    .sm\:static {
+      position: static;
+    }
+  }
+
+  /* Add any other problematic utility classes here */
+</style>
+
+<!-- Add specific responsive utility classes that Storybook has trouble with -->
+<style>
+  /* Fix for responsive utility classes */
+  @media (min-width: 640px) {
+    .sm\:static { position: static !important; }
+    .sm\:relative { position: relative !important; }
+    .sm\:absolute { position: absolute !important; }
+    .sm\:sticky { position: sticky !important; }
+    .sm\:fixed { position: fixed !important; }
+    .sm\:block { display: block !important; }
+    .sm\:inline-block { display: inline-block !important; }
+    .sm\:flex { display: flex !important; }
+    .sm\:grid { display: grid !important; }
+    .sm\:hidden { display: none !important; }
+  }
+  
+  /* Fix for border utility classes */
+  .border-border { border-color: var(--border) !important; }
+  .bg-background { background-color: hsl(var(--background)) !important; }
+  .text-foreground { color: hsl(var(--foreground)) !important; }
+  
+  /* Add more utility classes as needed */
+</style>

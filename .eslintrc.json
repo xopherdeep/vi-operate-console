@@ -12,7 +12,8 @@
     "plugin:react/recommended",
     "eslint:recommended",
     "plugin:prettier/recommended",
-    "next"
+    "next",
+    "plugin:storybook/recommended"
   ],
   "rules": {
     "react/react-in-jsx-scope": "off",
@@ -27,7 +28,9 @@
     "lines-between-class-members": [
       "error",
       "always",
-      { "exceptAfterSingleLine": true }
+      {
+        "exceptAfterSingleLine": true
+      }
     ]
   },
   "ignorePatterns": [
@@ -45,7 +48,11 @@
     "ecmaVersion": 2021,
     "sourceType": "module"
   },
-  "plugins": ["react", "jsx-a11y", "@typescript-eslint"],
+  "plugins": [
+    "react",
+    "jsx-a11y",
+    "@typescript-eslint"
+  ],
   "settings": {
     "react": {
       "version": "detect"

@@ -1,11 +1,11 @@
-import { Button } from '@/components/_common/ui/button';
+import { Button } from '@/ui/button';
 import {
   Card,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle
-} from '@/components/_common/ui/card';
+} from '@/ui/card'
 import { signIn } from '@/lib/auth';
 
 export default function AuthPage() {

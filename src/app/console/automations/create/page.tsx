@@ -1,148 +1,252 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
-import BackgroundComponent from '@/components/_common/layout/generated-bg/generated-bg';
+import React, { useState, useCallback, useRef } from 'react';
+import { Connection, Edge, Node } from 'reactflow';
+import { Sparkles, Save, Play, FileJson, Settings, MessageSquare, ZoomIn, ZoomOut } from 'lucide-react';
 
 // UI Components
-import { Button } from '@/components/_common/ui/button';
-import { Input } from '@/components/_common/ui/input';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/_common/ui/card';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { Card, CardHeader, CardContent, CardTitle } from '@/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/ui/resizable';
 
-// Local Components
+// Custom Components
+import { WorkflowCanvas, NodePalette, CustomNode, CustomEdge } from '../_common/components/workflow-canvas';
+import { Page } from '@/components/common/layout';
 import AutomationSheet from './sheet';
-import { Page } from '@/components/_common/layout';
+import AutomationAssistant from './assistant';
+
+// Mock Data
+import { defaultWorkflowTemplate, defaultAutomationConfig, WorkflowTemplate, AutomationConfig } from '@/lib/mock-data/workflow-templates';  // Interface is imported from mock-data/workflow-templates
 
 /**
  * Renders the Automation Creation Page component.
  *
- * This component provides a user interface for creating a new automation task.
- * It includes a form for user input, allowing users to specify the automation
- * task details. The page also integrates an AI assistant that guides users through
- * the process and offers real-time suggestions. The second step is displayed in a
- * slide-out sheet from the right.
+ * This component provides a visual interface for creating a new workflow automation.
+ * It includes a canvas for designing the workflow with nodes and connections,
+ * a palette of available nodes, and an AI assistant that guides users through
+ * the process and offers real-time suggestions.
  */
-
 export default function AutomationCreatePage() {
+  // Sheet and assistant states
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [activeAutomation, setActiveAutomation] = useState({
-    frequency: 'Real Time',
-    source: 'LOC_PATIENT_REFERRALS',
-    destination: 'REDUCE ATTRITION'
-  });
+  const [assistantOpen, setAssistantOpen] = useState(true);
+  
+  // Workflow state
+  const [workflow, setWorkflow] = useState<WorkflowTemplate>(defaultWorkflowTemplate);
+
+  // Selection state for nodes/edges
+  const [selectedElement, setSelectedElement] = useState<Node | Edge | null>(null);
+  
+  // Automation configuration
+  const [activeAutomation, setActiveAutomation] = useState<AutomationConfig>(defaultAutomationConfig);
+  
+  // Canvas reference
+  const canvasRef = useRef(null);
+  
+  // User prompt for AI assistance
   const [userPrompt, setUserPrompt] = useState('');
 
-  // Create a stable seed value for the background component that won't change on re-renders
-  const backgroundSeed = useMemo(
-    () => Math.floor(Math.random() * 10000000),
-    []
-  );
+  // Handler for workflow property changes
+  const handleWorkflowPropertyChange = (property: keyof WorkflowTemplate, value: any) => {
+    setWorkflow(prevWorkflow => ({
+      ...prevWorkflow,
+      [property]: value
+    }));
+  };
+  
+  // Handler for node changes (position, etc.)
+  const onNodesChange = useCallback((nodes: CustomNode[]) => {
+    setWorkflow(prevWorkflow => ({
+      ...prevWorkflow,
+      nodes
+    }));
+  }, []);
+  
+  // Handler for edge changes
+  const onEdgesChange = useCallback((edges: CustomEdge[]) => {
+    setWorkflow(prevWorkflow => ({
+      ...prevWorkflow,
+      edges
+    }));
+  }, []);
+  
+  // Handler for new connections between nodes
+  const onConnect = useCallback((params: Connection) => {
+    setWorkflow(prevWorkflow => {
+      const newEdge: CustomEdge = {
+        id: `edge-${Date.now()}`,
+        source: params.source!,
+        target: params.target!,
+        sourceHandle: params.sourceHandle,
+        targetHandle: params.targetHandle,
+        type: 'custom',
+        animated: true
+      };
+      
+      return {
+        ...prevWorkflow,
+        edges: [...prevWorkflow.edges, newEdge]
+      };
+    });
+  }, []);
+  
+  // Handler for selecting nodes/edges
+  const onElementClick = useCallback((event: React.MouseEvent, element: Node | Edge) => {
+    setSelectedElement(element);
+    setSheetOpen(true);
+  }, []);
+  
+  // Handler for adding a node from the palette
+  const handleAddNode = useCallback((nodeType: string, data: any) => {
+    const newNode: CustomNode = {
+      id: `${nodeType}-${Date.now()}`,
+      type: nodeType,
+      position: {
+        x: Math.random() * 300 + 50,
+        y: Math.random() * 300 + 50
+      },
+      data: {
+        ...data,
+        label: data.label || 'New Node'
+      }
+    };
+    
+    setWorkflow(prevWorkflow => ({
+      ...prevWorkflow,
+      nodes: [...prevWorkflow.nodes, newNode]
+    }));
+  }, []);
 
-  const handlePromptSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (userPrompt.trim()) {
-      setSheetOpen(true);
-    }
+  // Toggle the assistant panel
+  const toggleAssistant = () => {
+    setAssistantOpen(prev => !prev);
   };
 
   return (
-    <BackgroundComponent seed={backgroundSeed} distribution="edges">
-      <div className="flex justify-center items-center min-h-screen w-full px-4 py-16">
-        <Card className="max-w-3xl w-full bg-transparent p-8 border border-none shadow-none rounded-none">
-          <Sparkles className="h-40 w-40 mx-auto text-purple-500 mb-6 font-thin" />
-
-          <CardHeader className="p-0 mb-8 space-y-0">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => window.history.back()}
-                className="mr-2"
-              >
-                <ArrowRight className="h-4 w-4 rotate-180" />
-              </Button>
-              <CardTitle className="text-2xl font-bold">
-                Create New Automation
-              </CardTitle>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-0 space-y-8">
-            <div className="space-y-4">
-              <form
-                onSubmit={handlePromptSubmit}
-                className="flex flex-col space-y-4"
-              >
-                <fieldset className="border border-gray-200 rounded-md p-4 bg-white/70 shadow-sm">
-                  <legend className="px-2 text-sm font-medium text-gray-700">
-                    What do you want to know?
-                  </legend>
-                  <div className="relative mt-2">
-                    <Input
-                      id="userPrompt"
-                      type="text"
-                      value={userPrompt}
-                      onChange={(e) => setUserPrompt(e.target.value)}
-                      placeholder="I would like to..."
-                      className="pl-4 pr-20 py-6 text-base bg-white shadow-inner"
-                    />
-                    <Button
-                      type="submit"
-                      className="absolute right-2 inset-y-2 bg-purple-600 hover:bg-purple-700"
-                    >
-                      <span className="mr-1">Next</span>
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </fieldset>
-              </form>
-            </div>
-
-            <Card className="border border-gray-100 rounded-lg p-4 shadow-sm bg-white/70 backdrop-blur-sm">
-              <CardHeader className="p-0 mb-2 space-y-0">
-                <CardTitle className="text-sm font-medium">
-                  System Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span className="text-xs text-gray-600">
-                      Required sources added
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span className="text-xs text-gray-600">
-                      2 active archetypes
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span className="text-xs text-gray-600">
-                      Data connections valid
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span className="text-xs text-gray-600">
-                      Settings configured
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </CardContent>
-        </Card>
+    <Page title='Create Automation' variant='splash'>
+      <div className="flex items-center justify-between w-full mb-4">
+        <div className="flex items-center gap-4">
+          <Input
+            value={workflow.name}
+            onChange={(e) => handleWorkflowPropertyChange('name', e.target.value)}
+            className="text-xl font-bold bg-transparent border-none shadow-none max-w-md px-0 h-auto focus-visible:ring-0"
+            style={{ paddingLeft: 0 }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={toggleAssistant}
+            className="gap-1"
+          >
+            <MessageSquare size={16} />
+            Assistant
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-1"
+          >
+            <Save size={16} />
+            Save
+          </Button>
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="gap-1"
+          >
+            <Play size={16} />
+            Test Run
+          </Button>
+        </div>
       </div>
 
-      {/* Sheet component for the second step */}
+      <div className="h-[calc(100vh-12rem)]">
+        <ResizablePanelGroup direction="horizontal" className="border rounded-md h-full">
+          {/* Left panel: Node palette */}
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={25}>
+            <div className="h-full p-2">
+              <NodePalette onNodeAdd={handleAddNode} />
+            </div>
+          </ResizablePanel>
+          
+          <ResizableHandle />
+          
+          {/* Right panel: Canvas */}
+          <ResizablePanel defaultSize={80}>
+            <Tabs defaultValue="canvas" className="h-full flex flex-col">
+              <div className="border-b px-4">
+                <div className="flex justify-between items-center">
+                  <TabsList className="mt-2">
+                    <TabsTrigger value="canvas" className="data-[state=active]:bg-muted gap-1 text-xs">
+                      Canvas
+                    </TabsTrigger>
+                    <TabsTrigger value="json" className="data-[state=active]:bg-muted gap-1 text-xs">
+                      <FileJson className="w-3.5 h-3.5 mr-1" />
+                      JSON
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <div className="flex items-center gap-2 pr-2">
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <ZoomOut className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              <TabsContent value="canvas" className="flex-1 p-0 m-0 data-[state=active]:flex">
+                <div className="w-full h-full" ref={canvasRef}>
+                  <WorkflowCanvas
+                    nodes={workflow.nodes}
+                    edges={workflow.edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onConnect={onConnect}
+                    onNodeClick={onElementClick}
+                    className="w-full h-full"
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="json" className="flex-1 m-0 p-4 overflow-auto data-[state=active]:block">
+                <pre className="text-xs whitespace-pre-wrap">
+                  {JSON.stringify({
+                    name: workflow.name,
+                    description: workflow.description,
+                    nodes: workflow.nodes,
+                    edges: workflow.edges
+                  }, null, 2)}
+                </pre>
+              </TabsContent>
+            </Tabs>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+
+      {/* Sheet component for node/edge properties */}
       <AutomationSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         userPrompt={userPrompt}
         activeAutomation={activeAutomation}
       />
-    </BackgroundComponent>
+      
+      {/* Assistant component */}
+      <AutomationAssistant 
+        open={assistantOpen}
+        onOpenChange={setAssistantOpen}
+        workflowName={workflow.name}
+      />
+    </Page>
   );
 }

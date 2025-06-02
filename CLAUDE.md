@@ -42,20 +42,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Structure
 - **src/components**: Reusable UI components
-  - **_common/ui**: Shadcn UI components
-  - **dashboards**: Dashboard-specific components
-  - **charts**: Data visualization components
+  - **common/ui**: Shadcn UI components
+  - **common/navigation**: Navigation components
+  - **common/layout**: Layout components
+  - **common/patterns**: UI design patterns
+  - **generated-bg**: Background graphics generators
+  - **interactive-background**: Interactive background components
 - **src/app**: Next.js app router pages and layouts
   - **console**: Admin console pages
-- **src/hooks**: Custom React hooks
+    - **dashboards**: Dashboard pages
+    - **reports**: Report pages
+    - **automations**: Automation and workflow pages
+    - **archetypes**: Archetype management
+    - **sources**: Data source management
+  - **api**: API routes and endpoints
+  - **auth**: Authentication pages
+  - **dev**: Developer tools
+- **src/hooks**: Top-level custom React hooks
 - **src/lib**: Utilities, services, and helpers
+  - **api**: API client and endpoints
+  - **db**: Database client and operations
+  - **hooks**: Library-specific hooks
   - **mock-data**: Mock data for development and testing
-  - **services**: Business logic and API services
+  - **services**: Business logic services
   - **utils**: Utility functions
+- **src/providers**: React context providers
 - **src/types**: TypeScript type definitions
 
 ## Data Flow
 - Mock data is defined in src/lib/mock-data
-- Services in src/lib/services fetch and transform data
-- Hooks consume services and provide data to components
-- Components render the data and handle user interactions
+- Services in src/lib/services and feature-specific service directories fetch and transform data
+- Hooks (in src/hooks and src/lib/hooks) consume services and provide data to components
+- React Server Components handle server-side data fetching when possible
+- Client components render the data and handle user interactions

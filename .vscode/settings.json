@@ -1,3 +1,35 @@
 {
-  "cSpell.words": ["Automations"]
+  "cSpell.words": ["Automations"],
+  "material-icon-theme.folders.associations": {
+    "archetypes": "Context",
+    "automations": "Robot",
+    "dashboards": "Benchmark",
+    "sources": "Pipe",
+    "services": "Functions",
+    "patterns": "Template",
+    "api": "Api",
+    "utils": "Utils",
+    "lib": "Lib",
+    "types": "Typescript",
+    "providers": "Connection",
+    "icons": "Images",
+    "images": "Images",
+    "mock-data": "Mock",
+  },
+  "material-icon-theme.files.associations": {
+    "*.service.ts": "Hardhat",
+    "index.ts": "Disc",
+    "layout.tsx": "Architecture",
+    "page.client.tsx": "Document",
+    "page.tsx": "Document",
+    "error.tsx": "Opa",
+    "not-found.tsx": "Stryker",
+    "pnpm-lock.yaml": "Lock",
+    "middleware.ts": "Brainfuck",
+    "db.ts": "Database",
+    "auth.ts": "Key",
+    "utils.ts": "Bazel",
+    "client.ts": "Robots",
+    "endpoints.ts": "Velocity",
+  }
 }

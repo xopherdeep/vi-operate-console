@@ -1,4 +1,3 @@
-import { ReactNode } from 'react';
 import { IconData } from '@/types/common';
 import {
   CallVolumeDataPoint,
@@ -11,8 +10,8 @@ import {
   AgentPerformanceDataPoint
 } from '@/types/charts';
 import { DashboardData } from '@/types/dashboard';
-import { SourceViewModel, ConnectionOption } from '@/types/source';
-import { ReportViewModel, ScheduledReportCardProps, ReportTab } from '@/types/report';
+import { ConnectionOption } from '@/types/source';
+import { ReportTab } from '@/types/report';
 import { AutomationTab } from '@/types/automation';
 
 /**

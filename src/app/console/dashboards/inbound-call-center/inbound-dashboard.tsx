@@ -7,8 +7,8 @@ import {
   CardHeader,
   CardTitle,
   CardFooter
-} from '@/components/_common/ui/card';
-import { Button } from '@/components/_common/ui/button';
+} from '@/ui/card';
+import { Button } from '@/ui/button';
 import {
   AlertTriangle,
   ArrowRight,
@@ -23,11 +23,11 @@ import {
   BarChart,
   ScatterChart,
   CalendarHeatmap
-} from '@/components/_common/ux/charts';
-import { InsightAlert } from '@/app/console/dashboards/insight-alert';
-import { PageLayout } from '@/components/_common/layout/page-layout';
-import { DashboardData } from '@/types/dashboard';
-import { inboundCallCenterMockData } from '@/lib/mock-data';
+} from '@/components/common/patterns/charts';
+import { InsightAlert } from '@/app/console/dashboards/_common/components/insight-alert';
+import { Layout } from '@/components/common/layout/layout';
+import { DashboardData } from '@/app/console/dashboards/_common/types/dashboard';
+import { inboundCallCenterMockData } from '@/lib/db/mock-data/index';
 import { 
   CallVolumeDataPoint, 
   StaffingRequirement, 
@@ -42,20 +42,17 @@ export function InboundDashboard({ initialData }: InboundDashboardProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | undefined>(
     initialData
   );
-  const [isLoading, setIsLoading] = useState(!initialData);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const { getDashboardData } = await import(
-          '@/lib/services/dashboard-service'
+          '@/app/console/dashboards/_common/services/dashboard.service'
         );
         const fetchedData = await getDashboardData('inbound-call-center');
         setDashboardData(fetchedData);
       } catch (error) {
         console.error('Error fetching inbound dashboard data:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -63,10 +60,6 @@ export function InboundDashboard({ initialData }: InboundDashboardProps) {
       fetchDashboardData();
     }
   }, [initialData]);
-
-  if (isLoading) {
-    return <div>Loading dashboard data...</div>;
-  }
 
   const data = dashboardData || inboundCallCenterMockData;
 

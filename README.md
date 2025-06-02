@@ -115,30 +115,140 @@ src/
 ├── app/                  # Next.js App Router pages
 │   ├── layout.tsx        # Root layout
 │   ├── page.tsx          # Landing page
+│   ├── error.tsx         # Root error handling
+│   ├── not-found.tsx     # 404 page
 │   ├── console/          # Main application
+│   │   ├── layout.tsx    # Console layout
 │   │   ├── page.tsx      # Console home page
+│   │   ├── error.tsx     # Console error handling
 │   │   ├── dashboards/   # Dashboard pages
 │   │   ├── reports/      # Reports pages
 │   │   ├── automations/  # Automation pages
+│   │   │   ├── page.tsx  # Main automations page
+│   │   │   ├── tabs.tsx  # Navigation tabs
+│   │   │   ├── _common/  # Shared automation components
+│   │   │   ├── builder/  # Legacy builder (redirects)
+│   │   │   ├── create/   # Automation creation flow
+│   │   │   ├── services/ # Automation-specific services
+│   │   │   └── workflows/# Workflow-specific pages
+│   │   │       └── builder/ # Visual workflow builder
 │   │   ├── archetypes/   # Archetype pages
 │   │   └── sources/      # Data source pages
-│   └── api/              # API routes
+│   ├── api/              # API routes
+│   │   ├── agents/       # AI agents endpoints
+│   │   ├── archetypes/   # Archetypes endpoints
+│   │   ├── auth/         # Authentication endpoints
+│   │   ├── automations/  # Automations endpoints
+│   │   ├── metrics/      # Metrics and analytics endpoints
+│   │   ├── reports/      # Reports endpoints
+│   │   ├── seed/         # Database seeding endpoints
+│   │   ├── sources/      # Data sources endpoints
+│   │   └── workflows/    # Workflows endpoints
+│   ├── auth/             # Authentication pages
+│   │   └── page.tsx      # Login/signup page
+│   └── dev/              # Developer tools pages
+│       ├── page.tsx      # Developer home page
+│       └── tools/        # Development utilities
 │
 ├── components/           # Reusable UI components
-│   ├── _common/          # Common components used across features
+│   ├── animated-background.tsx # Background animation component
+│   ├── hydration-boundary.tsx  # React hydration boundary component
+│   ├── index.ts          # Component exports
+│   ├── web-vitals-tracker.tsx  # Performance metrics tracking
+│   ├── common/           # Common components
 │   │   ├── layout/       # Layout components
-│   │   ├── ui/           # UI primitives (shadcn/ui)
-│   │   └── ux/           # UX components (charts, etc.)
-│   └── features/         # Feature-specific components
+│   │   ├── navigation/   # Navigation components
+│   │   ├── patterns/     # UI design patterns
+│   │   └── ui/           # UI primitives (shadcn/ui)
+│   ├── generated-bg/     # Background graphics generators
+│   │   ├── box.ts
+│   │   ├── c-shape.ts
+│   │   ├── generated-bg.tsx
+│   │   ├── hexagon.ts
+│   │   ├── l-shape.ts
+│   │   ├── platform.ts
+│   │   ├── pyramid.ts
+│   │   ├── sacred.ts
+│   │   ├── stepped.ts
+│   │   ├── t-shape.ts
+│   │   ├── u-shape.ts
+│   │   └── zigzag.ts
+│   └── interactive-background/  # Interactive background components
+│       └── interactive-background.tsx
+│
+├── constants/            # Application constants
+│   └── connection-icons.ts # Icons for connection types
 │
 ├── hooks/                # Custom React hooks
-├── lib/                  # Utilities and services
-│   ├── db/               # Database client and operations
-│   ├── mock-data/        # Mock data for development
-│   ├── services/         # Business logic services
-│   └── utils/            # Utility functions
+│   ├── index.ts
+│   └── useAutomations.tsx # Automation-specific hooks
 │
-└── styles/               # Global styles
+├── lib/                  # Utilities and services
+│   ├── auth.ts           # Authentication utilities
+│   ├── db.ts             # Database utilities
+│   ├── utils.ts          # General utilities
+│   ├── api/              # API client and endpoints
+│   │   ├── client.ts
+│   │   └── endpoints.ts
+│   ├── db/               # Database client and operations
+│   │   ├── client.ts
+│   │   ├── index.ts
+│   │   ├── mock-data.ts
+│   │   ├── mock-db.ts
+│   │   ├── operations.ts
+│   │   ├── schema.ts
+│   │   └── mock-data/    # Structured mock data
+│   ├── hooks/            # Library-specific hooks
+│   │   ├── useApiContent.tsx
+│   │   ├── useDataContent.tsx
+│   │   ├── useFastRefreshState.ts
+│   │   └── useIsMobile.ts
+│   ├── mock-data/        # Mock data for development
+│   │   ├── automations.ts
+│   │   ├── helpers.ts
+│   │   ├── inbound-call-center.ts
+│   │   ├── index.ts
+│   │   ├── outbound-call-center.ts
+│   │   ├── reports.ts
+│   │   ├── sources.ts
+│   │   ├── types.ts
+│   │   └── workflow-templates.ts
+│   ├── services/         # Business logic services
+│   │   └── dashboard-service.ts
+│   └── utils/            # Utility functions
+│       ├── fast-refresh.ts
+│       ├── index.ts
+│       ├── random.ts
+│       └── refresh-dev-tools.ts
+│
+├── providers/            # React context providers
+│   └── query-provider.tsx
+│
+├── services/             # Global business logic services (top-level)
+│
+├── styles/               # Global styles
+│   ├── _globals.css
+│   ├── animations.css
+│   ├── base.css
+│   ├── components.css
+│   ├── tailwind.css
+│   ├── theme.css
+│   └── utilities.css
+│
+└── types/                # TypeScript type definitions
+    ├── agent.d.ts        # AI agent types
+    ├── archetype.d.ts    # Archetype data model types
+    ├── automation.d.ts   # Automation process types
+    ├── charts.d.ts       # Chart and visualization types
+    ├── common.d.ts       # Shared type definitions
+    ├── dashboard.d.ts    # Dashboard layout and data types
+    ├── forecast.d.ts     # Forecasting types
+    ├── index.ts          # Type exports
+    ├── report.d.ts       # Reporting types
+    ├── schedule.d.ts     # Scheduling types
+    ├── source.d.ts       # Data source types
+    ├── user.d.ts         # User and authentication types
+    └── workflow.d.ts     # Workflow types
 ```
 
 ### Component Organization
@@ -146,15 +256,17 @@ src/
 The project follows these organization principles:
 
 1. **Page-Centric Structure**: Each page in the `app/` directory represents a route in the application
-2. **Component Reuse**: Common components in `components/_common/` are extensively used across different page sections
-3. **Feature Isolation**: Each feature (dashboards, reports, etc.) has its own directory with page-specific components
+2. **Component Reuse**: Common components in `components/common/` are extensively used across different page sections
+3. **Feature Isolation**: Each feature (dashboards, reports, automations, etc.) has its own directory with page-specific components
 4. **Separation of Concerns**: UI components are separate from business logic (in hooks and services)
+5. **Module Organization**: Feature-specific components are organized within their respective module directories (e.g., `automations/_common/`)
 
 This structure allows for:
 - Clear separation between pages and reusable components
 - Efficient component reuse across different sections
 - Easy navigation between related files
 - Scalable organization as more features are added
+- Feature-specific components kept close to their usage
 
 ## 🚀 Getting Started
 

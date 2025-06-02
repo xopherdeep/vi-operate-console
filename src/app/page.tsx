@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/_common/ui/button';
+import { Button } from '@/ui/button';
 import {
   Heart,
   TrendingUp,
@@ -11,8 +11,8 @@ import {
   ArrowRight,
   BarChart3
 } from 'lucide-react';
-import { AnimatedBackground } from '@/components/_common/layout/animated-background';
-import { Card, CardContent } from '@/components/_common/ui/card';
+import { AnimatedBackground } from '@/components/animated-background';
+import { Card, CardContent } from '@/ui/card';
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);

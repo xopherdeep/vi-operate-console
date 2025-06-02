@@ -17,9 +17,14 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@/public/assets/*": ["./public/assets/*"],
-      "@/common/*": ["./src/components/_common/*"],
-      "@/ui/*": ["src/components/_common/ui/*"]
+      "@/public/*": ["public/*"],
+      "@/common/*": ["./src/components/common/*"],
+      "@/ui/*": ["./src/components/common/ui/*"],
+      "@/patterns/*": ["./src/components/common/patterns/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/api/*": ["./src/lib/api/*"],
+      "@/utils/*": ["./src/lib/utils/*"]
     },
     "plugins": [
       {
@@ -33,6 +38,6 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, ".storybook/stories/Input.stories.tsx", ".storybook/stories/Checkbox.stories.tsx", ".storybook/stories/Card.stories.tsx", ".storybook/stories/Button.stories.tsx"  ],
   "exclude": ["node_modules", "~/.config"]
 }

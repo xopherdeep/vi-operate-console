@@ -1,7 +1,7 @@
 import 'server-only';
 import { count, eq, ilike } from 'drizzle-orm';
 import { products } from './schema';
-import { MockDB } from './mock-db';
+import { MockDB } from './mock-data/mock-db';
 
 // Initialize database clients
 let neonClient: any;

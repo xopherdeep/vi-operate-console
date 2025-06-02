@@ -37,6 +37,20 @@ export interface SourceViewModel {
   iconBg: string;
   datasets: number;
   models: number;
+  lastRefresh?: Date;
+  refreshInterval?: number;
+  schema?: {
+    tables: number;
+    views: number;
+  };
+  health?: {
+    status: string;
+    metrics?: {
+      availability: string;
+      latency: string;
+      errors: string;
+    };
+  };
 }
 
 // Source connection card props

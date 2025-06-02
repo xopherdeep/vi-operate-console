@@ -6,7 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle
-} from '@/components/_common/ui/card';
+} from '@/ui/card';
 import {
   LineChart as LineChartIcon,
   BarChart as BarChartIcon,
@@ -14,11 +14,11 @@ import {
   Users,
   Target
 } from 'lucide-react';
-import { Button } from '@/components/_common/ui/button';
-import { LineChart, BarChart } from '@/components/_common/ux/charts';
-import { MetricItem } from '@/app/console/dashboards/metrics-display';
-import { DashboardData } from '@/lib/services/dashboard-service';
-import { outboundCallCenterMockData } from '@/lib/mock-data';
+import { Button } from '@/ui/button';
+import { LineChart, BarChart } from '@/components/common/patterns/charts';
+import { MetricItem } from '@/app/console/dashboards/_common/components/metrics-display';
+import { DashboardData } from '@/app/console/dashboards/_common/services/dashboard.service';
+import { outboundCallCenterMockData } from '@/lib/db/mock-data/index';
 
 interface OutboundDashboardProps {
   initialData?: DashboardData;
@@ -34,7 +34,7 @@ export function OutboundDashboard({ initialData }: OutboundDashboardProps) {
     const fetchDashboardData = async () => {
       try {
         const { getDashboardData } = await import(
-          '@/lib/services/dashboard-service'
+          '@/app/console/dashboards/_common/services/dashboard.service'
         );
         const fetchedData = await getDashboardData('outbound-call-center');
         setDashboardData(fetchedData);

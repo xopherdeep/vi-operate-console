@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardFooter
-} from '@/components/_common/ui/card';
-import { Button } from '@/components/_common/ui/button';
+} from '@/ui/card';
+import { Button } from '@/ui/button';
 import {
   Gauge,
   LineChart,
@@ -16,58 +16,70 @@ import {
   Phone,
   PhoneOutgoing,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  LayoutGrid,
+  List
 } from 'lucide-react';
-import { DashboardCardList } from '@/app/console/dashboards/list';
-import { getDashboardSummary } from '@/lib/services/dashboard-service';
-import { PageLayout } from '@/components/_common/layout/page-layout';
-import { Page } from '@/components/_common/layout';
+import { DashboardCardList } from '@/app/console/dashboards/_common/components/list';
+import { DashboardTable } from '@/app/console/dashboards/_common/components/table'; 
+import { getDashboardSummary } from '@/app/console/dashboards/_common/services/dashboard.service';
+import { Layout } from '@/components/common/layout/layout';
+import { Page } from '@/components/common/layout';
+import { useSearchParams } from 'next/navigation';
 
 // Metadata is defined in metadata.ts
 
-export default function DashboardsPage() {
+function DashboardContent() {
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table'); // Default to table view
+  const searchParams = useSearchParams();
+  const offset = Number(searchParams.get('offset') || '10');
+  
+  // Use this ref to track if data has already been loaded
+  const dataFetchedRef = useRef(false);
+  
+  // Toggle view mode between card and table
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'card' ? 'table' : 'card');
+  };
 
   useEffect(() => {
+    // Only fetch data once, not on every search param change
+    if (dataFetchedRef.current) return;
+    
     let isMounted = true;
+    setIsLoading(true);
     
     const fetchData = async () => {
       try {
         const data = await getDashboardSummary();
         if (isMounted) {
           setDashboardData(data);
+          dataFetchedRef.current = true;
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         if (isMounted) {
           // Set default data even if there's an error to prevent infinite loading
           setDashboardData({ dashboards: [], recentReports: [] });
+          dataFetchedRef.current = true;
+          setIsLoading(false);
         }
       }
     };
 
     fetchData();
     
-    // Set a fallback timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (isMounted && !dashboardData) {
-        setDashboardData({ dashboards: [], recentReports: [] });
-      }
-    }, 3000);
-    
     // Cleanup function to prevent memory leaks and state updates on unmounted components
     return () => {
       isMounted = false;
-      clearTimeout(timeoutId);
     };
-  }, []);
-
-  if (!dashboardData) {
-    return <Page title="Dashboards">Loading dashboards...</Page>;
-  }
+  }, []); // Empty dependency array - we only want to fetch once when the component mounts
 
   // Convert the dashboards data to the format expected by DashboardCardList
-  const dashboardCards = (dashboardData.dashboards || []).map(
+  const dashboardCards = ((dashboardData && dashboardData.dashboards) || []).map(
     (dashboard: any) => {
       const statusVariantMap: Record<
         string,
@@ -148,25 +160,40 @@ export default function DashboardsPage() {
   );
 
   // Format recent reports
-  const recentReports = dashboardData?.recentReports || [];
+  const recentReports = (dashboardData && dashboardData.recentReports) || [];
 
   return (
     <Page
       title="Dashboards"
+      isLoading={isLoading} 
       actionButton={{
         label: 'Create Dashboard',
         onClick: () => console.log('Create dashboard clicked')
       }}
+      secondaryActionButton={{
+        icon: viewMode === 'card' ? <List className="h-4 w-4 mr-2" /> : <LayoutGrid className="h-4 w-4 mr-2" />,
+        label: viewMode === 'card' ? 'Table View' : 'Card View',
+        onClick: toggleViewMode
+      }}
     >
-      <DashboardCardList
-        cards={dashboardCards}
-        showCreateCard={true}
-        createCardProps={{
-          title: 'Create New Dashboard',
-          description:
-            'Build a custom dashboard to track specific metrics and KPIs for your call center operations'
-        }}
-      />
+      {viewMode === 'card' ? (
+        <DashboardCardList
+          cards={dashboardCards}
+          showCreateCard={true}
+          createCardProps={{
+            title: 'Create New Dashboard',
+            description:
+              'Build a custom dashboard to track specific metrics and KPIs for your call center operations'
+          }}
+        />
+      ) : (
+        <DashboardTable 
+          dashboards={(dashboardData && dashboardData.dashboards) || []} 
+          basePath="/console/dashboards"
+          currentOffset={offset}
+          itemsPerPage={10}
+        />
+      )}
 
       <div className="mt-8">
         <h2 className="text-xl font-bold mb-4">Recent Reports</h2>
@@ -195,5 +222,14 @@ export default function DashboardsPage() {
         </div>
       </div>
     </Page>
+  );
+}
+
+// Export the main component with Suspense boundary around the content using useSearchParams
+export default function DashboardsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

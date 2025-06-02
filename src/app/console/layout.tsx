@@ -1,18 +1,18 @@
 'use client';
 
 import { Analytics } from '@vercel/analytics/react';
-import { DynamicBreadcrumb } from '@/components/_common/navigation/dynamic-breadcrumb';
-import { SearchInput } from './dashboards/search';
-import { AppLauncher } from '@/components/_common/navigation/app-launcher';
+import { DynamicBreadcrumb } from '@/components/common/navigation/dynamic-breadcrumb';
+import { SearchInput } from './dashboards/_common/components/search';
+import { AppLauncher } from '@/components/common/navigation/app-launcher/app-launcher';
 import dynamic from 'next/dynamic';
-const User = dynamic(() => import('./dashboards/user').then(mod => mod.ClientUser));
-import Providers from './dashboards/providers';
+const User = dynamic(() => import('./dashboards/_common/components/user').then(mod => mod.ClientUser));
+import Providers from './dashboards/_common/components/providers';
 import { usePathname } from 'next/navigation';
 const DesktopNav = dynamic(
-  () => import('@/components/_common/navigation/desktop-nav')
+  () => import('@/components/common/navigation/desktop-nav')
 );
 const MobileNav = dynamic(
-  () => import('@/components/_common/navigation/mobile-nav')
+  () => import('@/components/common/navigation/mobile-nav')
 );
 
 export default function ConsoleLayout({
@@ -33,7 +33,8 @@ export default function ConsoleLayout({
             <header className="header">
               <MobileNav />
               <DynamicBreadcrumb />
-              <SearchInput />
+              {/* <SearchInput /> */}
+              <div className="flex flex-grow"></div>
               <div className="flex items-center gap-2">
                 <User />
                 <AppLauncher />

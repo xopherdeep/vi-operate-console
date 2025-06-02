@@ -1,47 +1,58 @@
-export default {
+import withBundleAnalyzer from '@next/bundle-analyzer';
+import { type RemotePattern } from 'next/dist/shared/lib/image-config';
+import type { NextConfig } from 'next';
+
+const config: NextConfig = {
   output: "standalone",
+  reactStrictMode: true,
+  turbopack: {},
+
+  experimental: {
+    // optimizeCss: true,
+    serverActions: {
+      bodySizeLimit: "2mb",
+    }
+  },
+
   images: {
     domains: [
-      "transform.vi.co",
+      "operate.vi.co",
     ],
     remotePatterns: [
       {
         protocol: "https",
         hostname: "avatars.githubusercontent.com",
-      },
+        pathname: "/**",
+        port: "",
+      } as RemotePattern,
       {
         protocol: "https",
         hostname: "avatar.vercel.sh",
-      },
+        pathname: "/**",
+        port: "",
+      } as RemotePattern,
       {
         protocol: "https",
-        hostname: "staging-ge-api.transform.vi.co",
-      },
+        hostname: "placehold.co",
+        pathname: "/**",
+        port: "",
+      } as RemotePattern,
     ],
   },
-  // ignore lint build errors
+
   eslint: {
     ignoreDuringBuilds: true,
   },
+
   typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
     ignoreBuildErrors: true,
   },
+
   async redirects() {
-    return [
-      // {
-      //   source: "/",
-      //   destination: "/console/dashboards",
-      //   permanent: true,
-      // },
-      // {
-      //   source: "/console",
-      //   destination: "/console/dashboards",
-      //   permanent: true,
-      // },
-    ];
+    return [];
   },
 };
+
+export default process.env.ANALYZE === 'true'
+  ? withBundleAnalyzer()(config)
+  : config;

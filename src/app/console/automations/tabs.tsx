@@ -1,5 +1,5 @@
-import BigButtonTabs from '@/components/_common/ux/tabs/big-button-tabs';
-import { useAutomationTabs } from '@/hooks/useAutomations';
+import BigButtonTabs from '@/components/common/patterns/tabs/big-button-tabs';
+import { useAutomationTabs } from '@/hooks';
 
 export default function AutomationTabs() {
   const { tabs } = useAutomationTabs();

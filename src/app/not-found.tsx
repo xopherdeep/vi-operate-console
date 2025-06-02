@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/_common/ui/button';
+import { Button } from '@/ui/button';
 import { Radar, Search, Map, Compass, Home, ArrowLeft } from 'lucide-react';
+import { Properties } from 'csstype';
 
 export default function NotFound() {
   // Initialize with centered position (0,0) to avoid initial render jump
@@ -39,7 +40,18 @@ export default function NotFound() {
   }, []);
 
   // Helper function to compute background element style.
-  const computeBackgroundStyle = (elem, t, mousePos) => {
+  const computeBackgroundStyle = (elem: {
+    width: number;
+    height: number;
+    left: number;
+    top: number;
+    opacity: number;
+    depth: number;
+    rotationFactor: number;
+    movementAmplitude: number;
+    movementSpeed: number;
+    floatPhase: number;
+  }, t: number, mousePos: { x: number; y: number }): Properties<string | number> => {
     const floatY = Math.sin(t * elem.movementSpeed + elem.floatPhase) * elem.movementAmplitude * 15;
     const floatX = Math.cos(t * elem.movementSpeed + elem.floatPhase) * elem.movementAmplitude * 10;
     const shiftX = mousePos.x * elem.depth * 150 + floatX;
@@ -70,8 +82,8 @@ export default function NotFound() {
       transform: `translate3d(${roundedShiftX}px, ${roundedShiftY}px, ${roundedTranslateZ}px) rotateX(${roundedRotateX}deg) rotateY(${roundedRotateY}deg) rotateZ(${roundedRotateZ}deg)`,
       filter: `blur(${roundedBlur}px)`,
       boxShadow: `0 0 ${roundedShadow}px rgba(139, 92, 246, 0.3)`,
-      backfaceVisibility: 'hidden',
-      transformStyle: 'preserve-3d'
+      backfaceVisibility: 'hidden' as 'hidden',
+      transformStyle: 'preserve-3d' as 'preserve-3d'
     };
   };
 
@@ -139,7 +151,20 @@ export default function NotFound() {
     });
   }, []);
 
-  const computeIconStyle = (iconData, t, mousePos, index) => {
+  const computeIconStyle = (iconData: {
+    left: number;
+    top: number;
+    opacity: number;
+    depth: number;
+    rotationSpeed: number;
+    orbitRadius: number;
+    orbitSpeed: number;
+    orbitPhase: number;
+    bounceHeight: number;
+    bounceSpeed: number;
+    bouncePhase: number;
+    zIndex: number;
+  }, t: number, mousePos: { x: number; y: number }, index: number): Properties<string | number> => {
     const orbitX = Math.cos(t * iconData.orbitSpeed + iconData.orbitPhase) * iconData.orbitRadius;
     const orbitY = Math.sin(t * iconData.orbitSpeed + iconData.orbitPhase) * iconData.orbitRadius;
     const bounce = Math.sin(t * iconData.bounceSpeed + iconData.bouncePhase) * iconData.bounceHeight;
@@ -168,7 +193,7 @@ export default function NotFound() {
       zIndex: iconData.zIndex,
       boxShadow: hasBoxShadow ? `0 0 ${boxShadowSize}px rgba(139, 92, 246, ${shadowOpacity})` : 'none',
       transition: 'none',
-      transformStyle: 'preserve-3d'
+      transformStyle: 'preserve-3d',
     };
   };
 
