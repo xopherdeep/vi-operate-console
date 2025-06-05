@@ -7,8 +7,8 @@ import '@fontsource/poppins/700.css';
 
 import { Analytics } from '@vercel/analytics/react';
 import { QueryProvider } from '@/providers/query-provider';
-import WebVitalsTracker from '@/components/web-vitals-tracker';
-import HydrationBoundary from '@/components/hydration-boundary';
+import WebVitalsTracker from '@/components/common/layout/web-vitals-tracker';
+import HydrationBoundary from '@/components/common/layout/hydration-boundary';
 
 export const metadata = {
   title: 'VI Operate Console',

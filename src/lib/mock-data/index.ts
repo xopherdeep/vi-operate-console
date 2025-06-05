@@ -1,6 +1,5 @@
 export * from './inbound-call-center';
 export * from './outbound-call-center';
 export * from './sources';
-export * from './reports';
-export * from './automations';
+// reports data has moved to @/lib/db/mock-data/reports
 export * from './workflow-templates';

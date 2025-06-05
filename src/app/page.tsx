@@ -11,7 +11,7 @@ import {
   ArrowRight,
   BarChart3
 } from 'lucide-react';
-import { AnimatedBackground } from '@/components/animated-background';
+import { AnimatedBackground } from '@/components/common/layout/animated-background';
 import { Card, CardContent } from '@/ui/card';
 
 export default function HomePage() {

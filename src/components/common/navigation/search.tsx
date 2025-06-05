@@ -3,8 +3,8 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/ui/input';
-import { Spinner } from '@/ui'
 import { Search } from 'lucide-react';
+import { Spinner } from '@/ui/icons';
 
 export function SearchInput() {
   const router = useRouter();

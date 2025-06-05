@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger
-} from '@/uin-menu';
+} from '@/ui/dropdown-menu';
 import Link from 'next/link';
 
 export async function User() {
