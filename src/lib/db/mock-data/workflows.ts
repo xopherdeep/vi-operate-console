@@ -75,7 +75,8 @@ export const workflowsMockData = [
           settings: {
             method: 'POST',
             url: 'https://conductor.operate.vi.co/conductor/workflows/2/run',
-          }
+          },
+          position: { x: 100, y: 100 }
         }
       ],
       nodes: [
@@ -90,7 +91,8 @@ export const workflowsMockData = [
               'Authorization': 'Bearer {{secrets.ZENDESK_API_KEY}}',
               'Content-Type': 'application/json'
             }
-          }
+          },
+          position: { x: 250, y: 100 }
         },
         {
           id: 'fetch_requester_data',
@@ -103,7 +105,8 @@ export const workflowsMockData = [
               'Authorization': 'Bearer {{secrets.ZENDESK_API_KEY}}',
               'Content-Type': 'application/json'
             }
-          }
+          },
+          position: { x: 400, y: 100 }
         },
         {
           id: 'extract_identifiers',
@@ -114,7 +117,8 @@ export const workflowsMockData = [
             prompt_template: 'Extract all customer identifiers from the following requester data. Return email, phone_number, and member_number with confidence levels for each extraction.\n\n{{fetch_requester_data.outputs}}',
             model: 'anthropic/claude-3-sonnet-20240229',
             temperature: 0.1
-          }
+          },
+          position: { x: 550, y: 100 }
         },
         {
           id: 'filter_high_confidence',
@@ -140,7 +144,8 @@ export const workflowsMockData = [
               }
               return result;
             `
-          }
+          },
+          position: { x: 700, y: 100 }
         },
         {
           id: 'search_24go_users',
@@ -158,7 +163,8 @@ export const workflowsMockData = [
               "phone_numbers": {{filter_high_confidence.outputs.phone_numbers}},
               "member_numbers": {{filter_high_confidence.outputs.member_numbers}}
             }`
-          }
+          },
+          position: { x: 850, y: 50 }
         },
         {
           id: 'search_by_name_dob',
@@ -175,7 +181,8 @@ export const workflowsMockData = [
               "name": "{{fetch_requester_data.outputs.user.name}}",
               "date_of_birth": "{{fetch_requester_data.outputs.user.date_of_birth}}"
             }`
-          }
+          },
+          position: { x: 850, y: 150 }
         },
         {
           id: 'consolidate_user_data',
@@ -190,7 +197,8 @@ export const workflowsMockData = [
                 member_search: inputs.search_by_name_dob.outputs
               };
             `
-          }
+          },
+          position: { x: 1000, y: 100 }
         },
         {
           id: 'classify_ticket',
@@ -224,7 +232,8 @@ export const workflowsMockData = [
             `,
             model: 'anthropic/claude-3-sonnet-20240229',
             temperature: 0.1
-          }
+          },
+          position: { x: 1150, y: 100 }
         },
         {
           id: 'update_ticket',
@@ -249,7 +258,8 @@ export const workflowsMockData = [
                 }
               }
             }`
-          }
+          },
+          position: { x: 1300, y: 100 }
         },
         {
           id: 'determine_response',
@@ -274,7 +284,8 @@ export const workflowsMockData = [
                 "target": "general_template"
               }
             ]
-          }
+          },
+          position: { x: 1450, y: 100 }
         },
         {
           id: 'account_access_template',
@@ -298,7 +309,8 @@ export const workflowsMockData = [
             `,
             model: 'anthropic/claude-3-sonnet-20240229',
             temperature: 0.7
-          }
+          },
+          position: { x: 1600, y: 0 }
         },
         {
           id: 'billing_template',
@@ -322,7 +334,8 @@ export const workflowsMockData = [
             `,
             model: 'anthropic/claude-3-sonnet-20240229',
             temperature: 0.7
-          }
+          },
+          position: { x: 1600, y: 100 }
         },
         {
           id: 'tech_support_template',
@@ -347,7 +360,8 @@ export const workflowsMockData = [
             `,
             model: 'anthropic/claude-3-sonnet-20240229',
             temperature: 0.7
-          }
+          },
+          position: { x: 1600, y: 200 }
         },
         {
           id: 'general_template',
@@ -371,7 +385,8 @@ export const workflowsMockData = [
             `,
             model: 'anthropic/claude-3-sonnet-20240229',
             temperature: 0.7
-          }
+          },
+          position: { x: 1600, y: 300 }
         },
         {
           id: 'add_response_comment',
@@ -393,7 +408,8 @@ export const workflowsMockData = [
                 "status": "pending"
               }
             }`
-          }
+          },
+          position: { x: 1750, y: 100 }
         },
         {
           id: 'send_notification',
@@ -402,7 +418,8 @@ export const workflowsMockData = [
           settings: {
             channel: "#support-tickets",
             message: "Ticket #{{inputs.ticket_id}} ({{fetch_ticket_data.outputs.ticket.title}}) has been auto-classified as {{classify_ticket.outputs.category}} and an initial response has been sent."
-          }
+          },
+          position: { x: 1900, y: 100 }
         }
       ],
       edges: [
