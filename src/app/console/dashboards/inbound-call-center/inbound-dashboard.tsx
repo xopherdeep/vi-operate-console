@@ -27,7 +27,7 @@ import {
 import { InsightAlert } from '@/app/console/dashboards/_common/components/insight-alert';
 import { Layout } from '@/components/common/layout/layout';
 import { DashboardData } from '@/app/console/dashboards/_common/types/dashboard';
-import { inboundCallCenterMockData } from '@/lib/db/mock-data/index';
+import { inboundCallCenterMockData } from '@/lib/mock-data';
 import { 
   CallVolumeDataPoint, 
   StaffingRequirement, 

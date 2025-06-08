@@ -17,8 +17,8 @@ import {
 import { Button } from '@/ui/button';
 import { LineChart, BarChart } from '@/components/common/patterns/charts';
 import { MetricItem } from '@/app/console/dashboards/_common/components/metrics-display';
-import { DashboardData } from '@/app/console/dashboards/_common/services/dashboard.service';
-import { outboundCallCenterMockData } from '@/lib/db/mock-data/index';
+import { DashboardData } from '@/app/console/dashboards/_common/types/dashboard';
+import { outboundCallCenterMockData } from '@/lib/db/mock-data/outbound-call-center';
 
 interface OutboundDashboardProps {
   initialData?: DashboardData;

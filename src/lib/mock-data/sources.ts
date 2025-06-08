@@ -1,6 +1,6 @@
 import { Database, Snowflake, CloudCog, Boxes, BarChart4, LayoutGrid, Layers } from 'lucide-react';
 import { createIconData } from './helpers';
-import { SourceConnection, ConnectionOption } from './types';
+import { SourceConnection, ConnectionOption } from '../db/mock-data/types';
 
 export const sourcesConnectionsMockData = [
   {

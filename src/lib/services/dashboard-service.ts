@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { inboundCallCenterMockData } from '@/lib/mock-data/inbound-call-center';
-import { outboundCallCenterMockData } from '@/lib/mock-data/outbound-call-center';
+import { inboundCallCenterMockData } from '@/lib/db/mock-data/index';
+import { outboundCallCenterMockData } from '@/lib/db/mock-data/index';
 import { 
   DashboardData, 
   DashboardSummary, 
