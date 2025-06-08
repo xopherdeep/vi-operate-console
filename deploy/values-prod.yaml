@@ -1,0 +1,108 @@
+# Production environment values for vi-operate-console
+# Use with: helm install -f values-prod.yaml
+
+# Environment configuration
+environment: prod
+replicaCount: 5
+
+# Container image configuration
+image:
+  repository: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo/vi-operate-console
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Service account with workload identity
+serviceAccount:
+  create: true
+  automount: true
+  annotations:
+    iam.gke.io/gcp-service-account: database-sa@vi-operate-prod.iam.gserviceaccount.com
+  name: "vi-operate-console-sa"
+
+# Pod annotations
+podAnnotations: {}
+
+# Security context for non-root container
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1001
+  capabilities:
+    drop:
+    - ALL
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+# Ingress configuration with external-dns
+ingress:
+  enabled: true
+  className: "gce"
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: "console.operate.vi.co"
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "vi-operate-console-prod-ip"
+    kubernetes.io/ingress.allow-http: "false"
+  hosts:
+    - host: console.operate.vi.co
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: vi-operate-console-prod-tls
+      hosts:
+        - console.operate.vi.co
+
+# Resource limits for production
+resources:
+  limits:
+    cpu: 4000m
+    memory: 4Gi
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+
+# Health probes
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Autoscaling for production
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 15
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 70
+
+# Environment-specific configuration
+config:
+  # Application-specific environment variables
+  env:
+    - name: NODE_ENV
+      value: "production"
+    - name: NEXT_PUBLIC_APP_ENV
+      value: "prod"

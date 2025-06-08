@@ -1,0 +1,104 @@
+# Development environment values for vi-operate-console
+# Use with: helm install -f values-dev.yaml
+
+# Environment configuration
+environment: dev
+replicaCount: 2
+
+# Container image configuration
+image:
+  repository: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo/vi-operate-console
+  pullPolicy: Always
+  tag: "dev"
+
+# Service account
+serviceAccount:
+  create: true
+  automount: false
+  name: "vi-operate-console-sa"
+
+# Pod annotations
+podAnnotations: {}
+
+# Security context for non-root container
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1001
+  capabilities:
+    drop:
+    - ALL
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+# Ingress configuration with external-dns
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: "dev-console.operate.vi.co"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: dev-console.operate.vi.co
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: vi-operate-dev-console-tls
+      hosts:
+        - dev-console.operate.vi.co
+
+# Resource limits for development (frontend-only)
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Health probes
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Autoscaling for development
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Environment-specific configuration
+config:
+  # Application-specific environment variables
+  env:
+    - name: NODE_ENV
+      value: "development"
+    - name: NEXT_PUBLIC_APP_ENV
+      value: "dev"

@@ -1,0 +1,107 @@
+# Staging environment values for vi-operate-console
+# Use with: helm install -f values-staging.yaml
+
+# Environment configuration
+environment: staging
+replicaCount: 3
+
+# Container image configuration
+image:
+  repository: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo/vi-operate-console
+  pullPolicy: IfNotPresent
+  tag: "staging"
+
+# Service account with workload identity
+serviceAccount:
+  create: true
+  automount: true
+  annotations:
+    iam.gke.io/gcp-service-account: database-sa@vi-operate-staging.iam.gserviceaccount.com
+  name: "vi-operate-console-sa"
+
+# Pod annotations
+podAnnotations: {}
+
+# Security context for non-root container
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1001
+  capabilities:
+    drop:
+    - ALL
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+# Ingress configuration with external-dns
+ingress:
+  enabled: true
+  className: "gce"
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: "console.staging.operate.vi.co"
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "vi-operate-console-staging-ip"
+  hosts:
+    - host: console.staging.operate.vi.co
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: vi-operate-console-staging-tls
+      hosts:
+        - console.staging.operate.vi.co
+
+# Resource limits for staging
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Health probes
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Autoscaling for staging
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Environment-specific configuration
+config:
+  # Application-specific environment variables
+  env:
+    - name: NODE_ENV
+      value: "production"
+    - name: NEXT_PUBLIC_APP_ENV
+      value: "staging"

@@ -1,0 +1,78 @@
+🚀 Vi Operate Console has been deployed successfully!
+
+📋 Deployment Information:
+   Chart Version: {{ .Chart.Version }}
+   App Version: {{ .Chart.AppVersion }}
+   Environment: {{ .Values.environment | default "dev" }}
+   Namespace: {{ .Release.Namespace }}
+   Release Name: {{ .Release.Name }}
+
+🌐 Application URL:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+   https://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+
+📊 DNS Management:
+   External-DNS will automatically create DNS records for:
+{{- range $host := .Values.ingress.hosts }}
+   - {{ $host.host }}
+{{- end }}
+{{- end }}
+
+🔗 Service Information:
+{{- if contains "LoadBalancer" .Values.service.type }}
+   Service Type: LoadBalancer
+   Port: {{ .Values.service.port }}
+   Target Port: {{ .Values.service.targetPort | default 3000 }}
+
+   NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+   Watch its status: kubectl get svc --namespace {{ .Release.Namespace }} -w {{ include "vi-operate-console.fullname" . }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+   Service Type: ClusterIP
+   Port: {{ .Values.service.port }}
+
+   To access the application locally:
+   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "vi-operate-console.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 3000:3000
+   echo "Visit http://127.0.0.1:3000 to use your application"
+{{- end }}
+
+🔐 Security:
+   - Workload Identity: {{ .Values.serviceAccount.annotations | toJson }}
+   - Running as non-root user (UID: 1001)
+   - Security contexts enabled
+
+📈 Monitoring:
+   - Health checks configured at /api/health
+   - Prometheus metrics available at port 3000
+{{- if .Values.autoscaling.enabled }}
+   - Horizontal Pod Autoscaling enabled ({{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }} replicas)
+{{- end }}
+
+🔧 Useful Commands:
+   # Check deployment status
+   kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "vi-operate-console.name" . }}
+
+   # View logs
+   kubectl logs -f -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "vi-operate-console.name" . }}
+
+   # Check external-dns logs
+   kubectl logs -f -n external-dns deployment/external-dns
+
+   # Scale deployment
+   kubectl scale deployment {{ include "vi-operate-console.fullname" . }} --replicas=3 -n {{ .Release.Namespace }}
+
+🎯 Environment-Specific Deployment:
+   # Development
+   helm install vi-operate-console ./deploy/vi-operate-console -f ./deploy/values-dev.yaml -n vi-operate-console --create-namespace
+
+   # Staging
+   helm install vi-operate-console ./deploy/vi-operate-console -f ./deploy/values-staging.yaml -n vi-operate-console --create-namespace
+
+   # Production
+   helm install vi-operate-console ./deploy/vi-operate-console -f ./deploy/values-prod.yaml -n vi-operate-console --create-namespace
+
+For more information, visit: https://operate.vi.co

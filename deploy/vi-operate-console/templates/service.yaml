@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vi-operate-console.fullname" . }}
+  labels:
+    {{- include "vi-operate-console.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort | default 3000 }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "vi-operate-console.selectorLabels" . | nindent 4 }}

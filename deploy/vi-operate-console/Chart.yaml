@@ -1,0 +1,31 @@
+apiVersion: v2
+name: vi-operate-console
+description: Vi Operate Console - Next.js frontend for health, wellness, and pharma operations management
+home: https://operate.vi.co
+sources:
+  - https://github.com/vi-co/vi-operate
+maintainers:
+  - name: Christian Roy
+    email: christian@vi.co
+  - name: Vi Team
+    email: team@vi.co
+keywords:
+  - vi-operate
+  - console
+  - nextjs
+  - frontend
+  - health
+  - pharma
+
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 1.0.0
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "1.0.0"
