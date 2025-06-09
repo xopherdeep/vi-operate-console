@@ -118,7 +118,6 @@ jobs:
 
       - name: Check if image exists
         id: image_check
-        if: steps.strategy.outputs.strategy == 'build'
         run: |
           IMAGE_TAG="${{ steps.strategy.outputs.deploy_version }}"
           if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG} >/dev/null 2>&1; then
@@ -130,7 +129,7 @@ jobs:
           fi
 
       - name: Build and push Docker image
-        if: steps.strategy.outputs.strategy == 'build' && (steps.image_check.outputs.image_exists == 'false' || inputs.force_rebuild)
+        if: steps.image_check.outputs.image_exists == 'false' || inputs.force_rebuild
         run: |
           IMAGE_TAG="${{ steps.strategy.outputs.deploy_version }}"
           echo "🐳 Building Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
