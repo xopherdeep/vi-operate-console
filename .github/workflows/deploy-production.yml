@@ -255,7 +255,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         with:
           status: success
-          channel: '#production-deployments'
+          channel: '#vi-operate-deploy'
           custom_payload: |
             {
               text: "🚀 Production Deployment Successful",
@@ -303,7 +303,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         with:
           status: failure
-          channel: '#production-deployments'
+          channel: '#vi-operate-deploy'
           custom_payload: |
             {
               text: "❌ Production Deployment Failed",

@@ -152,7 +152,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         with:
           status: ${{ job.status }}
-          channel: '#deployments'
+          channel: '#vi-operate-deploy'
           fields: repo,message,commit,author,action,eventName,ref,workflow
           custom_payload: |
             {

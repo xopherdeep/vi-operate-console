@@ -433,7 +433,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         with:
           status: ${{ steps.result.outputs.status }}
-          channel: ${{ inputs.emergency && '#emergency' || '#deployments' }}
+          channel: '#vi-operate-deploy'
           custom_payload: |
             {
               text: "${{ inputs.emergency && '🚨 EMERGENCY ROLLBACK' || '🔄 Rollback' }} ${{ steps.result.outputs.status }}",

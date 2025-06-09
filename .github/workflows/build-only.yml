@@ -237,7 +237,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         with:
           status: ${{ job.status }}
-          channel: '#claude-testing'
+          channel: '#vi-operate-deploy'
           custom_payload: |
             {
               text: "Build ${{ job.status }}: ${{ steps.build.outputs.built_version || 'Failed' }}",

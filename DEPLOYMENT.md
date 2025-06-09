@@ -301,11 +301,7 @@ Output:
 ### Slack Notifications
 
 Automatic notifications sent to:
-- `#dev-deployments` - Development deployments
-- `#deployments` - Staging deployments
-- `#production-deployments` - Production deployments
-- `#emergency` - Emergency rollbacks
-- `#builds` - Build-only operations
+- `#vi-operate-deploy` - All deployment notifications
 
 ## 🔒 Security Features
 
@@ -463,4 +459,4 @@ The system is designed to evolve. Future configurations will be backward compati
 
 ---
 
-**For support or questions about the deployment pipeline, contact the DevOps team or check the #deployments Slack channel.**
+**For support or questions about the deployment pipeline, contact the DevOps team or check the #vi-operate-deploy Slack channel.**
