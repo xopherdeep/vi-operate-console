@@ -1,0 +1,75 @@
+# CI/CD Configuration for Vi Operate Console
+# This file configures the intelligent, state-aware deployment pipeline
+
+# Version strategy
+version:
+  format: semantic              # or date-based
+  auto_increment: minor         # default for releases (major/minor/patch)
+  state_tracking: true          # Enable deployment state tracking
+
+# Branch settings
+branches:
+  main: prod                    # Main branch name
+  release_prefix: release/      # Release branch prefix
+  hotfix_prefix: hotfix/        # Hotfix branch prefix
+
+# Deployment settings
+deployment:
+  dev:
+    enabled: true
+    trigger: manual             # manual or branch_pattern
+    pattern: "^(feature|dev)/.*" # Branch pattern for auto-deploy (if enabled)
+    auto_cleanup: true          # Clean up old dev deployments
+
+  staging:
+    auto_deploy: true           # Auto-deploy on release branch commits
+    build_only_option: true     # Allow build without deploy
+    require_tests: true         # Run tests before deployment
+
+  production:
+    require_approval: true      # Require manual approval/confirmation
+    state_aware_options: true   # Filter options by deployment state
+    require_confirmation: true  # Double confirmation for production
+    emergency_bypass: false     # Allow emergency deployment bypass
+
+# State management
+state:
+  track_deployments: true       # Track deployment state across environments
+  storage: git_tags            # git_tags or external_api
+  prevent_mistakes: true        # Prevent common deployment mistakes
+
+# Docker settings
+docker:
+  registry: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo
+  image_name: vi-operate-console
+  build_only_tags: true        # Support tagging without immediate deploy
+  multi_arch: false            # Enable multi-architecture builds
+
+# Kubernetes settings
+kubernetes:
+  namespace_prefix: vi-operate  # Prefix for environment namespaces
+  helm_chart: ./deploy/vi-operate-console
+  timeout: 10m                 # Deployment timeout
+
+# Quality gates
+quality:
+  require_lint: true           # Run linting before deployment
+  require_typecheck: true      # Run TypeScript checking
+  require_build: true          # Ensure clean build before deployment
+  require_tests: false         # Run tests (set to true when tests are added)
+
+# Notifications
+notifications:
+  slack:
+    enabled: true
+    channels:
+      dev: "#dev-deployments"
+      staging: "#deployments"
+      production: "#production-deployments"
+      emergency: "#emergency"
+      builds: "#builds"
+
+  github:
+    enabled: true
+    pr_comments: true          # Comment on PRs with deployment info
+    releases: true             # Create GitHub releases for production versions

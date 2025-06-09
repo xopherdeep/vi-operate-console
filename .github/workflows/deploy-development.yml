@@ -1,0 +1,255 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'dev'
+      - 'develop'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Specific version to deploy (optional)'
+        required: false
+      force_rebuild:
+        description: 'Force rebuild even if image exists'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo
+  IMAGE_NAME: vi-operate-console
+
+jobs:
+  deploy-development:
+    runs-on: ubuntu-latest
+    environment: development
+
+    permissions:
+      contents: read
+      id-token: write # Required for OIDC authentication to GCP
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: |
+          # Run linting
+          if grep -q '"lint"' package.json; then
+            echo "Running linter..."
+            pnpm lint
+          fi
+
+          # Run type checking
+          if grep -q '"typecheck"' package.json; then
+            echo "Running type check..."
+            pnpm typecheck
+          fi
+
+      # Authenticate to Google Cloud using Workload Identity Federation (no secrets needed!)
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/vi-operate-iac-control/locations/global/workloadIdentityPools/github-actions-pool/providers/github-oidc
+          service_account: github-actions-development@vi-operate-dev.iam.gserviceaccount.com
+          token_format: access_token
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: vi-operate-dev
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Configure Kubernetes context
+        run: |
+          # Get credentials from gcloud (authenticated via Workload Identity)
+          gcloud container clusters get-credentials vi-operate-cluster-dev \
+            --region=us-central1 \
+            --project=vi-operate-dev
+          kubectl config current-context
+
+      - name: Determine deployment strategy
+        id: strategy
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "deploy_version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "strategy=existing" >> $GITHUB_OUTPUT
+          else
+            COMMIT_SHA=$(git rev-parse HEAD | cut -c1-8)
+            echo "deploy_version=commit-${COMMIT_SHA}" >> $GITHUB_OUTPUT
+            echo "strategy=build" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if image exists
+        id: image_check
+        if: steps.strategy.outputs.strategy == 'build'
+        run: |
+          IMAGE_TAG="${{ steps.strategy.outputs.deploy_version }}"
+          if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG} >/dev/null 2>&1; then
+            echo "image_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Image already exists: ${IMAGE_TAG}"
+          else
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+            echo "🏗️ Image needs to be built: ${IMAGE_TAG}"
+          fi
+
+      - name: Build and push Docker image
+        if: steps.strategy.outputs.strategy == 'build' && (steps.image_check.outputs.image_exists == 'false' || inputs.force_rebuild)
+        run: |
+          IMAGE_TAG="${{ steps.strategy.outputs.deploy_version }}"
+          echo "🐳 Building Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+
+          docker build \
+            -f deploy/Dockerfile \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG} \
+            .
+
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}
+
+          echo "✅ Built and pushed image: ${IMAGE_TAG}"
+
+      - name: Deploy to development
+        run: |
+          IMAGE_TAG="${{ steps.strategy.outputs.deploy_version }}"
+
+          echo "🚀 Deploying to development environment"
+          echo "Image tag: ${IMAGE_TAG}"
+
+          # Use Helm to deploy
+          helm upgrade --install vi-operate-console-dev \
+            ./deploy/vi-operate-console \
+            --namespace default \
+            --wait \
+            --timeout=10m \
+            --values ./deploy/values-dev.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${IMAGE_TAG}
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+
+          # Wait for rollout
+          kubectl rollout status deployment/vi-operate-console-dev -n default --timeout=300s
+
+          # Get pod status
+          kubectl get pods -n default -l app.kubernetes.io/name=vi-operate-console
+
+          # Get service info
+          kubectl get svc -n default -l app.kubernetes.io/name=vi-operate-console
+
+          echo "✅ Development deployment verified"
+
+      - name: Get deployment URL
+        id: url
+        run: |
+          # Try to get ingress URL
+          INGRESS_URL=$(kubectl get ingress -n default -o jsonpath='{.items[0].spec.rules[0].host}' 2>/dev/null || echo "")
+
+          if [ -n "$INGRESS_URL" ]; then
+            echo "deployment_url=https://${INGRESS_URL}" >> $GITHUB_OUTPUT
+          else
+            echo "deployment_url=kubectl port-forward required" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify deployment status
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#dev-deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          custom_payload: |
+            {
+              text: "Development Deployment ${{ job.status }}",
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : 'danger',
+                fields: [
+                  {
+                    title: 'Environment',
+                    value: 'Development',
+                    short: true
+                  },
+                  {
+                    title: 'Version',
+                    value: '${{ steps.strategy.outputs.deploy_version }}',
+                    short: true
+                  },
+                  {
+                    title: 'Branch',
+                    value: '${{ github.ref_name }}',
+                    short: true
+                  },
+                  {
+                    title: 'Strategy',
+                    value: '${{ steps.strategy.outputs.strategy }}',
+                    short: true
+                  },
+                  {
+                    title: 'URL',
+                    value: '${{ steps.url.outputs.deployment_url }}',
+                    short: false
+                  }
+                ]
+              }]
+            }
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deploymentUrl = '${{ steps.url.outputs.deployment_url }}';
+            const version = '${{ steps.strategy.outputs.deploy_version }}';
+
+            const comment = `🚀 **Development Deployment Successful**
+
+            - **Version**: \`${version}\`
+            - **Environment**: Development
+            - **URL**: ${deploymentUrl}
+
+            The latest changes have been deployed to the development environment and are ready for testing.`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Clean up Docker resources
+          docker system prune -f || true

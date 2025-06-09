@@ -70,11 +70,8 @@ service:
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
   enabled: true
-  className: "gce"
   annotations:
     external-dns.alpha.kubernetes.io/hostname: "console.dev.operate.vi.co"
-    kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.global-static-ip-name: "vi-operate-console-dev-ip"
   hosts:
     - host: console.dev.operate.vi.co
       paths:

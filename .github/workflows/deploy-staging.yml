@@ -1,0 +1,180 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - 'release/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Deployment action'
+        type: choice
+        options:
+          - create-rc
+          - deploy-existing
+          - build-only
+        default: create-rc
+      version:
+        description: 'Version (for existing/build-only)'
+        required: false
+      skip_confirm:
+        description: 'Skip confirmation prompts'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo
+  IMAGE_NAME: vi-operate-console
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY_STAGING }}
+          project_id: vi-operate-staging
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Configure Kubernetes context
+        run: |
+          echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+          kubectl config current-context
+
+      - name: Determine deployment action
+        id: action
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "action=create-rc" >> $GITHUB_OUTPUT
+            echo "auto_triggered=true" >> $GITHUB_OUTPUT
+          else
+            echo "action=${{ inputs.action }}" >> $GITHUB_OUTPUT
+            echo "auto_triggered=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Git config
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Execute deployment
+        env:
+          KUBECONFIG: /tmp/kubeconfig
+        run: |
+          case "${{ steps.action.outputs.action }}" in
+            create-rc)
+              node scripts/deploy/cli.js staging --create-rc --ci-mode
+              ;;
+            deploy-existing)
+              if [ -z "${{ inputs.version }}" ]; then
+                echo "Error: Version is required for deploy-existing action"
+                exit 1
+              fi
+              node scripts/deploy/cli.js staging --deploy-existing --version="${{ inputs.version }}" --ci-mode
+              ;;
+            build-only)
+              if [ -n "${{ inputs.version }}" ]; then
+                node scripts/deploy/cli.js staging --build-only --version="${{ inputs.version }}" --ci-mode
+              else
+                node scripts/deploy/cli.js staging --build-only --ci-mode
+              fi
+              ;;
+            *)
+              echo "Error: Unknown action ${{ steps.action.outputs.action }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Get deployment info
+        id: deployment
+        if: steps.action.outputs.action != 'build-only'
+        run: |
+          # Get current staging deployment
+          CURRENT_TAG=$(helm get values vi-operate-console-staging -n default -o json | jq -r '.image.tag // "unknown"')
+          echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Notify deployment status
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          custom_payload: |
+            {
+              text: "Staging Deployment ${{ job.status }}",
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : 'danger',
+                fields: [
+                  {
+                    title: 'Environment',
+                    value: 'Staging',
+                    short: true
+                  },
+                  {
+                    title: 'Action',
+                    value: '${{ steps.action.outputs.action }}',
+                    short: true
+                  },
+                  {
+                    title: 'Version',
+                    value: '${{ steps.deployment.outputs.current_tag || inputs.version || "auto-generated" }}',
+                    short: true
+                  },
+                  {
+                    title: 'Branch',
+                    value: '${{ github.ref_name }}',
+                    short: true
+                  },
+                  {
+                    title: 'Commit',
+                    value: '<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>',
+                    short: false
+                  }
+                ]
+              }]
+            }
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f /tmp/kubeconfig
+          docker system prune -f || true

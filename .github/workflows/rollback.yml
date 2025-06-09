@@ -1,0 +1,474 @@
+name: Emergency Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+        required: true
+      rollback_type:
+        description: 'Type of rollback'
+        type: choice
+        options:
+          - quick
+          - git-revert
+        default: quick
+      target_version:
+        description: 'Version to rollback to'
+        required: true
+      confirm_rollback:
+        description: 'I confirm this rollback operation'
+        type: boolean
+        required: true
+      emergency:
+        description: 'This is an emergency rollback'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo
+  IMAGE_NAME: vi-operate-console
+
+jobs:
+  validate-rollback:
+    runs-on: ubuntu-latest
+    outputs:
+      validated: ${{ steps.validate.outputs.validated }}
+      current_version: ${{ steps.validate.outputs.current_version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate rollback request
+        id: validate
+        run: |
+          echo "🔍 Validating rollback request..."
+
+          # Validate confirmation
+          if [ "${{ inputs.confirm_rollback }}" != "true" ]; then
+            echo "❌ Rollback not confirmed"
+            exit 1
+          fi
+
+          # Validate target version exists
+          if ! git rev-parse "${{ inputs.target_version }}" >/dev/null 2>&1; then
+            echo "❌ Target version ${{ inputs.target_version }} does not exist"
+            exit 1
+          fi
+
+          # Get current deployment
+          node -e "
+            const { DeploymentState } = require('./scripts/deploy/state');
+            const state = new DeploymentState();
+
+            (async () => {
+              try {
+                const currentVersion = await state.getCurrentDeployment('${{ inputs.environment }}');
+                console.log(\`Current ${{ inputs.environment }} version: \${currentVersion || 'unknown'}\`);
+
+                if (currentVersion === '${{ inputs.target_version }}') {
+                  console.log('⚠️ Target version is already deployed');
+                } else {
+                  console.log('✅ Rollback validated');
+                }
+
+                require('fs').appendFileSync(process.env.GITHUB_OUTPUT, \`validated=true\\ncurrent_version=\${currentVersion || 'unknown'}\\n\`);
+              } catch (error) {
+                console.error('❌ Validation error:', error.message);
+                process.exit(1);
+              }
+            })();
+          "
+
+  quick-rollback:
+    runs-on: ubuntu-latest
+    needs: validate-rollback
+    if: needs.validate-rollback.outputs.validated == 'true' && inputs.rollback_type == 'quick'
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ inputs.environment == 'production' && 'vi-operate-prod' || inputs.environment == 'staging' && 'vi-operate-staging' || 'vi-operate-dev' }}
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Configure Kubernetes context
+        run: |
+          SECRET_NAME="KUBECONFIG_$(echo ${{ inputs.environment }} | tr '[:lower:]' '[:upper:]')"
+          echo "Using secret: ${SECRET_NAME}"
+
+          case "${{ inputs.environment }}" in
+            production)
+              echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > /tmp/kubeconfig
+              ;;
+            staging)
+              echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > /tmp/kubeconfig
+              ;;
+            development)
+              echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > /tmp/kubeconfig
+              ;;
+          esac
+
+          export KUBECONFIG=/tmp/kubeconfig
+          kubectl config current-context
+
+      - name: Execute quick rollback
+        env:
+          KUBECONFIG: /tmp/kubeconfig
+        run: |
+          echo "🔄 Executing quick rollback to ${{ inputs.target_version }}"
+          echo "Current version: ${{ needs.validate-rollback.outputs.current_version }}"
+          echo "Target version: ${{ inputs.target_version }}"
+          echo "Environment: ${{ inputs.environment }}"
+
+          # Verify target image exists
+          if ! docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.target_version }} >/dev/null 2>&1; then
+            echo "❌ Target image does not exist: ${{ inputs.target_version }}"
+            exit 1
+          fi
+
+          # Get namespace and release name
+          case "${{ inputs.environment }}" in
+            production)
+              NAMESPACE="default"
+              RELEASE_NAME="vi-operate-console-prod"
+              ;;
+            staging)
+              NAMESPACE="default"
+              RELEASE_NAME="vi-operate-console-staging"
+              ;;
+            development)
+              NAMESPACE="default"
+              RELEASE_NAME="vi-operate-console-dev"
+              ;;
+          esac
+
+          echo "🚀 Rolling back ${RELEASE_NAME} in ${NAMESPACE}"
+
+          # Execute rollback using Helm upgrade
+          helm upgrade ${RELEASE_NAME} \
+            ./deploy/vi-operate-console \
+            --namespace ${NAMESPACE} \
+            --wait \
+            --timeout=10m \
+            --values ./deploy/values-${{ inputs.environment == 'development' && 'dev' || inputs.environment }}.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ inputs.target_version }}
+
+          echo "✅ Rollback completed"
+
+      - name: Verify rollback
+        env:
+          KUBECONFIG: /tmp/kubeconfig
+        run: |
+          echo "🔍 Verifying rollback..."
+
+          case "${{ inputs.environment }}" in
+            production)
+              NAMESPACE="default"
+              DEPLOYMENT="vi-operate-console-prod"
+              ;;
+            staging)
+              NAMESPACE="default"
+              DEPLOYMENT="vi-operate-console-staging"
+              ;;
+            development)
+              NAMESPACE="default"
+              DEPLOYMENT="vi-operate-console-dev"
+              ;;
+          esac
+
+          # Wait for rollout
+          kubectl rollout status deployment/${DEPLOYMENT} -n ${NAMESPACE} --timeout=300s
+
+          # Verify pods are running
+          kubectl get pods -n ${NAMESPACE} -l app.kubernetes.io/name=vi-operate-console
+
+          # Get current image tag
+          CURRENT_IMAGE=$(kubectl get deployment ${DEPLOYMENT} -n ${NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].image}')
+          echo "Current deployed image: ${CURRENT_IMAGE}"
+
+          if [[ "${CURRENT_IMAGE}" == *"${{ inputs.target_version }}" ]]; then
+            echo "✅ Rollback verified successfully"
+          else
+            echo "❌ Rollback verification failed"
+            exit 1
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f /tmp/kubeconfig
+
+  git-revert-rollback:
+    runs-on: ubuntu-latest
+    needs: validate-rollback
+    if: needs.validate-rollback.outputs.validated == 'true' && inputs.rollback_type == 'git-revert'
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ inputs.environment == 'production' && 'vi-operate-prod' || inputs.environment == 'staging' && 'vi-operate-staging' || 'vi-operate-dev' }}
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Setup kubectl and Helm
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Configure Kubernetes context
+        run: |
+          case "${{ inputs.environment }}" in
+            production)
+              echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > /tmp/kubeconfig
+              ;;
+            staging)
+              echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > /tmp/kubeconfig
+              ;;
+            development)
+              echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > /tmp/kubeconfig
+              ;;
+          esac
+
+      - name: Set up Git config
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Execute git revert rollback
+        env:
+          KUBECONFIG: /tmp/kubeconfig
+        run: |
+          echo "🔄 Executing git revert rollback"
+          echo "Creating revert commit for rollback to ${{ inputs.target_version }}"
+
+          # Generate new version for the rollback
+          node -e "
+            const { VersionManager } = require('./scripts/deploy/version');
+            const vm = new VersionManager();
+
+            const latestTag = vm.getLatestTag();
+            const nextVersion = vm.generateNextVersion(latestTag, 'patch');
+            console.log('Rollback version:', nextVersion);
+            require('fs').writeFileSync('/tmp/rollback_version', nextVersion);
+          "
+
+          ROLLBACK_VERSION=$(cat /tmp/rollback_version)
+          echo "New rollback version: ${ROLLBACK_VERSION}"
+
+          # Get commit hash for target version
+          TARGET_COMMIT=$(git rev-list -n 1 ${{ inputs.target_version }})
+
+          # Reset to target version
+          git reset --hard ${TARGET_COMMIT}
+
+          # Update package.json with new version
+          CLEAN_VERSION=$(echo "${ROLLBACK_VERSION}" | sed 's/^v//')
+          npm version ${CLEAN_VERSION} --no-git-tag-version
+
+          # Create rollback commit
+          git add .
+          git commit -m "rollback: revert to ${{ inputs.target_version }} as ${ROLLBACK_VERSION}
+
+          Emergency rollback performed by: ${{ github.actor }}
+          Original version: ${{ needs.validate-rollback.outputs.current_version }}
+          Target version: ${{ inputs.target_version }}
+          Rollback version: ${ROLLBACK_VERSION}
+
+          Workflow: ${{ github.run_id }}"
+
+          # Create tag
+          git tag -a "${ROLLBACK_VERSION}" -m "Emergency rollback to ${{ inputs.target_version }}"
+
+          # Build new image
+          echo "🐳 Building rollback image..."
+          docker build \
+            -f deploy/Dockerfile \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${ROLLBACK_VERSION} \
+            .
+
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${ROLLBACK_VERSION}
+
+          # Deploy the rollback
+          case "${{ inputs.environment }}" in
+            production)
+              NAMESPACE="default"
+              RELEASE_NAME="vi-operate-console-prod"
+              ;;
+            staging)
+              NAMESPACE="default"
+              RELEASE_NAME="vi-operate-console-staging"
+              ;;
+            development)
+              NAMESPACE="default"
+              RELEASE_NAME="vi-operate-console-dev"
+              ;;
+          esac
+
+          helm upgrade ${RELEASE_NAME} \
+            ./deploy/vi-operate-console \
+            --namespace ${NAMESPACE} \
+            --wait \
+            --timeout=10m \
+            --values ./deploy/values-${{ inputs.environment == 'development' && 'dev' || inputs.environment }}.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${ROLLBACK_VERSION}
+
+          # Push git changes
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin ${ROLLBACK_VERSION}
+
+          echo "rollback_version=${ROLLBACK_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f /tmp/kubeconfig /tmp/rollback_version
+
+  notify-rollback:
+    runs-on: ubuntu-latest
+    needs: [validate-rollback, quick-rollback, git-revert-rollback]
+    if: always() && needs.validate-rollback.outputs.validated == 'true'
+
+    steps:
+      - name: Determine rollback result
+        id: result
+        run: |
+          if [ "${{ inputs.rollback_type }}" = "quick" ]; then
+            STATUS="${{ needs.quick-rollback.result }}"
+          else
+            STATUS="${{ needs.git-revert-rollback.result }}"
+          fi
+          echo "status=${STATUS}" >> $GITHUB_OUTPUT
+
+      - name: Notify rollback completion
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ steps.result.outputs.status }}
+          channel: ${{ inputs.emergency && '#emergency' || '#deployments' }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          custom_payload: |
+            {
+              text: "${{ inputs.emergency && '🚨 EMERGENCY ROLLBACK' || '🔄 Rollback' }} ${{ steps.result.outputs.status }}",
+              attachments: [{
+                color: '${{ steps.result.outputs.status }}' === 'success' ? 'good' : 'danger',
+                fields: [
+                  {
+                    title: 'Environment',
+                    value: '${{ inputs.environment }}',
+                    short: true
+                  },
+                  {
+                    title: 'Type',
+                    value: '${{ inputs.rollback_type }}',
+                    short: true
+                  },
+                  {
+                    title: 'From Version',
+                    value: '${{ needs.validate-rollback.outputs.current_version }}',
+                    short: true
+                  },
+                  {
+                    title: 'To Version',
+                    value: '${{ inputs.target_version }}',
+                    short: true
+                  },
+                  {
+                    title: 'Executed by',
+                    value: '${{ github.actor }}',
+                    short: true
+                  },
+                  {
+                    title: 'Emergency',
+                    value: '${{ inputs.emergency }}',
+                    short: true
+                  }
+                ]
+              }]
+            }

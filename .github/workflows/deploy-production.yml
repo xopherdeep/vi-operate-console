@@ -1,0 +1,324 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Deployment action'
+        type: choice
+        options:
+          - promote
+          - rollback
+        required: true
+      version:
+        description: 'Version to deploy (RC for promote, final version for rollback)'
+        required: true
+      confirm_deployment:
+        description: 'I confirm this production deployment'
+        type: boolean
+        required: true
+      emergency_deployment:
+        description: 'This is an emergency deployment'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo
+  IMAGE_NAME: vi-operate-console
+
+jobs:
+  validate-deployment:
+    runs-on: ubuntu-latest
+    outputs:
+      validated: ${{ steps.validate.outputs.validated }}
+      final_version: ${{ steps.validate.outputs.final_version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate deployment request
+        id: validate
+        run: |
+          echo "Validating ${{ inputs.action }} of version ${{ inputs.version }}"
+
+          # Validate confirmation
+          if [ "${{ inputs.confirm_deployment }}" != "true" ]; then
+            echo "❌ Deployment not confirmed"
+            exit 1
+          fi
+
+          # Set up validation script
+          node -e "
+            const { DeploymentState } = require('./scripts/deploy/state');
+            const state = new DeploymentState();
+
+            (async () => {
+              try {
+                const validation = await state.validateDeployment(
+                  'production',
+                  '${{ inputs.action }}',
+                  '${{ inputs.version }}'
+                );
+
+                if (!validation.valid) {
+                  console.error('❌ Validation failed:', validation.errors.join(', '));
+                  process.exit(1);
+                }
+
+                if (validation.warnings.length > 0) {
+                  console.warn('⚠️ Warnings:', validation.warnings.join(', '));
+                }
+
+                let finalVersion = '${{ inputs.version }}';
+                if ('${{ inputs.action }}' === 'promote') {
+                  finalVersion = '${{ inputs.version }}'.replace(/-rc\\d+$/, '');
+                }
+
+                console.log('✅ Validation passed');
+                console.log(\`final_version=\${finalVersion}\`);
+                require('fs').appendFileSync(process.env.GITHUB_OUTPUT, \`validated=true\\nfinal_version=\${finalVersion}\\n\`);
+              } catch (error) {
+                console.error('❌ Validation error:', error.message);
+                process.exit(1);
+              }
+            })();
+          "
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: validate-deployment
+    if: needs.validate-deployment.outputs.validated == 'true'
+    environment:
+      name: production
+      url: https://console.operate.vi.co
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY_PROD }}
+          project_id: vi-operate-prod
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Configure Kubernetes context
+        run: |
+          echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+          kubectl config current-context
+
+      - name: Set up Git config
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get current production status
+        id: current
+        run: |
+          CURRENT_TAG=$(helm get values vi-operate-console-prod -n default -o json | jq -r '.image.tag // "unknown"' 2>/dev/null || echo "unknown")
+          echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Execute production deployment
+        env:
+          KUBECONFIG: /tmp/kubeconfig
+        run: |
+          echo "🚀 Executing ${{ inputs.action }} deployment"
+          echo "Current production: ${{ steps.current.outputs.current_tag }}"
+          echo "Target version: ${{ inputs.version }}"
+
+          case "${{ inputs.action }}" in
+            promote)
+              echo "🎯 Promoting RC to production"
+              node scripts/deploy/cli.js production --promote="${{ inputs.version }}" --ci-mode --skip-confirm
+              ;;
+            rollback)
+              echo "🔄 Rolling back production"
+              node scripts/deploy/cli.js production --rollback="${{ inputs.version }}" --ci-mode --skip-confirm
+              ;;
+            *)
+              echo "❌ Unknown action: ${{ inputs.action }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Verify deployment
+        id: verify
+        run: |
+          echo "🔍 Verifying deployment..."
+
+          # Wait for deployment to stabilize
+          sleep 30
+
+          # Check deployment status
+          kubectl rollout status deployment/vi-operate-console-prod -n default --timeout=300s
+
+          # Get final deployment info
+          DEPLOYED_TAG=$(helm get values vi-operate-console-prod -n default -o json | jq -r '.image.tag')
+          echo "deployed_tag=${DEPLOYED_TAG}" >> $GITHUB_OUTPUT
+
+          # Basic health check
+          kubectl get pods -n default -l app.kubernetes.io/name=vi-operate-console
+
+          echo "✅ Deployment verified successfully"
+
+      - name: Create deployment record
+        if: success()
+        run: |
+          # Create a deployment record for tracking
+          echo "📝 Recording deployment..."
+
+          DEPLOYMENT_INFO=$(cat <<EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "action": "${{ inputs.action }}",
+            "version": "${{ inputs.version }}",
+            "final_version": "${{ needs.validate-deployment.outputs.final_version }}",
+            "previous_version": "${{ steps.current.outputs.current_tag }}",
+            "deployed_by": "${{ github.actor }}",
+            "commit": "${{ github.sha }}",
+            "emergency": ${{ inputs.emergency_deployment }},
+            "workflow_run": "${{ github.run_id }}"
+          }
+          EOF
+          )
+
+          echo "Deployment record: ${DEPLOYMENT_INFO}"
+
+      - name: Notify deployment success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#production-deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          custom_payload: |
+            {
+              text: "🚀 Production Deployment Successful",
+              attachments: [{
+                color: 'good',
+                fields: [
+                  {
+                    title: 'Action',
+                    value: '${{ inputs.action }}',
+                    short: true
+                  },
+                  {
+                    title: 'Version',
+                    value: '${{ needs.validate-deployment.outputs.final_version }}',
+                    short: true
+                  },
+                  {
+                    title: 'Previous Version',
+                    value: '${{ steps.current.outputs.current_tag }}',
+                    short: true
+                  },
+                  {
+                    title: 'Deployed by',
+                    value: '${{ github.actor }}',
+                    short: true
+                  },
+                  {
+                    title: 'Emergency',
+                    value: '${{ inputs.emergency_deployment }}',
+                    short: true
+                  },
+                  {
+                    title: 'URL',
+                    value: 'https://console.operate.vi.co',
+                    short: true
+                  }
+                ]
+              }]
+            }
+
+      - name: Notify deployment failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#production-deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          custom_payload: |
+            {
+              text: "❌ Production Deployment Failed",
+              attachments: [{
+                color: 'danger',
+                fields: [
+                  {
+                    title: 'Action',
+                    value: '${{ inputs.action }}',
+                    short: true
+                  },
+                  {
+                    title: 'Version',
+                    value: '${{ inputs.version }}',
+                    short: true
+                  },
+                  {
+                    title: 'Attempted by',
+                    value: '${{ github.actor }}',
+                    short: true
+                  },
+                  {
+                    title: 'Workflow Run',
+                    value: '<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>',
+                    short: false
+                  }
+                ]
+              }]
+            }
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f /tmp/kubeconfig
+          docker system prune -f || true

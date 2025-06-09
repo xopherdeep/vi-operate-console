@@ -9,7 +9,16 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "deploy:dev": "node scripts/deploy/cli.js development",
+    "deploy:staging": "node scripts/deploy/cli.js staging",
+    "deploy:prod": "node scripts/deploy/cli.js production",
+    "rollback:dev": "node scripts/deploy/rollback.js development",
+    "rollback:staging": "node scripts/deploy/rollback.js staging",
+    "rollback:prod": "node scripts/deploy/rollback.js production",
+    "build:version": "node scripts/deploy/build-only.js",
+    "deploy:status": "node scripts/deploy/status.js",
+    "deploy:help": "node scripts/deploy/cli.js --help"
   },
   "dependencies": {
     "@fontsource/poppins": "^5.2.6",
@@ -80,7 +89,8 @@
     "typescript": "5.8.3",
     "vaul": "^1.1.2",
     "web-vitals": "^4.2.4",
-    "zod": "^3.25.48"
+    "zod": "^3.25.48",
+    "js-yaml": "^4.1.0"
   },
   "prettier": {
     "arrowParens": "always",

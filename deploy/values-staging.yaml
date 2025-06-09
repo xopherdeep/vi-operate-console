@@ -46,20 +46,19 @@ service:
 # Ingress configuration with external-dns
 ingress:
   enabled: true
-  className: "gce"
+  className: "nginx"
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: "console.staging.operate.vi.co"
-    kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.global-static-ip-name: "vi-operate-console-staging-ip"
+    external-dns.alpha.kubernetes.io/hostname: "staging-console.operate.vi.co"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
   hosts:
-    - host: console.staging.operate.vi.co
+    - host: staging-console.operate.vi.co
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: vi-operate-console-staging-tls
+    - secretName: vi-operate-staging-console-tls
       hosts:
-        - console.staging.operate.vi.co
+        - staging-console.operate.vi.co
 
 # Resource limits for staging
 resources:

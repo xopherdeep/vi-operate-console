@@ -1,0 +1,13 @@
+{
+  "name": "@vi-operate/deployment-scripts",
+  "version": "1.0.0",
+  "description": "State-aware deployment scripts for Vi Operate Console",
+  "private": true,
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "commander": "^9.4.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,287 @@
+name: Build Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (auto-generated if empty)'
+        required: false
+      increment_type:
+        description: 'Version increment type'
+        type: choice
+        options:
+          - minor
+          - patch
+          - major
+        default: minor
+      create_release:
+        description: 'Create GitHub release'
+        type: boolean
+        default: false
+      push_tags:
+        description: 'Push git tags'
+        type: boolean
+        default: true
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: us-central1-docker.pkg.dev/vi-operate-artifacts/vi-operate-docker-repo
+  IMAGE_NAME: vi-operate-console
+
+jobs:
+  build-version:
+    runs-on: ubuntu-latest
+    outputs:
+      built_version: ${{ steps.build.outputs.built_version }}
+      image_tag: ${{ steps.build.outputs.image_tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run quality checks
+        run: |
+          echo "🔍 Running quality checks..."
+
+          # Run linting
+          if grep -q '"lint"' package.json; then
+            echo "Running linter..."
+            pnpm lint
+          fi
+
+          # Run type checking
+          if grep -q '"typecheck"' package.json; then
+            echo "Running type check..."
+            pnpm typecheck
+          fi
+
+          # Build the application
+          echo "Building application..."
+          pnpm build
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY_ARTIFACTS }}
+          project_id: vi-operate-artifacts
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Set up Git config
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine version and build
+        id: build
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            # Use provided version
+            VERSION="${{ inputs.version }}"
+            if [[ ! "$VERSION" =~ ^v ]]; then
+              VERSION="v${VERSION}"
+            fi
+          else
+            # Generate next version
+            echo "🎯 Generating next version..."
+            VERSION=$(node -e "
+              const { VersionManager } = require('./scripts/deploy/version');
+              const vm = new VersionManager();
+
+              // Get version from branch or generate next
+              const branchVersion = vm.getVersionFromBranch();
+              if (branchVersion) {
+                console.log(branchVersion);
+              } else {
+                const latestTag = vm.getLatestTag();
+                const nextVersion = vm.generateNextVersion(latestTag, '${{ inputs.increment_type }}');
+                console.log(nextVersion);
+              }
+            ")
+          fi
+
+          echo "🏷️ Building version: ${VERSION}"
+
+          # Check if this is an RC or final version
+          if [[ "${VERSION}" =~ -rc[0-9]+$ ]]; then
+            echo "Building Release Candidate: ${VERSION}"
+            BUILD_TYPE="rc"
+          else
+            echo "Building Final Version: ${VERSION}"
+            BUILD_TYPE="final"
+          fi
+
+          # Update package.json
+          CLEAN_VERSION=$(echo "${VERSION}" | sed 's/^v//' | sed 's/-rc[0-9]*$//')
+          npm version ${CLEAN_VERSION} --no-git-tag-version
+          echo "✅ Updated package.json to ${CLEAN_VERSION}"
+
+          # Create version commit
+          git add package.json
+          git commit -m "chore: bump version to ${VERSION}" || true
+
+          # Create git tag
+          git tag -a "${VERSION}" -m "Release ${VERSION}"
+          echo "✅ Created git tag: ${VERSION}"
+
+          # Build Docker image
+          echo "🐳 Building Docker image..."
+          docker build \
+            -f deploy/Dockerfile \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION} \
+            --build-arg VERSION=${VERSION} \
+            --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --build-arg COMMIT_SHA=${{ github.sha }} \
+            .
+
+          # Push Docker image
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}
+          echo "✅ Pushed Docker image: ${VERSION}"
+
+          # Push git tags if requested
+          if [ "${{ inputs.push_tags }}" = "true" ]; then
+            git push origin ${VERSION}
+            echo "✅ Pushed git tag: ${VERSION}"
+          fi
+
+          # Set outputs
+          echo "built_version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "image_tag=${VERSION}" >> $GITHUB_OUTPUT
+          echo "build_type=${BUILD_TYPE}" >> $GITHUB_OUTPUT
+
+      - name: Generate build artifacts info
+        id: artifacts
+        run: |
+          IMAGE_DIGEST=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.built_version }} --format='{{index .RepoDigests 0}}')
+          IMAGE_SIZE=$(docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.built_version }} --format "{{.Size}}")
+
+          echo "image_digest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
+          echo "image_size=${IMAGE_SIZE}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: inputs.create_release && success()
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.build.outputs.built_version }}
+          release_name: Release ${{ steps.build.outputs.built_version }}
+          body: |
+            ## Release ${{ steps.build.outputs.built_version }}
+
+            ### 🚀 Deployment Information
+            - **Version**: `${{ steps.build.outputs.built_version }}`
+            - **Docker Image**: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.built_version }}`
+            - **Image Digest**: `${{ steps.artifacts.outputs.image_digest }}`
+            - **Image Size**: `${{ steps.artifacts.outputs.image_size }}`
+            - **Built from**: `${{ github.sha }}`
+            - **Built by**: @${{ github.actor }}
+
+            ### 📦 Deployment Commands
+
+            **Staging:**
+            ```bash
+            npm run deploy:staging -- --version=${{ steps.build.outputs.built_version }}
+            ```
+
+            **Production (if RC):**
+            ```bash
+            npm run deploy:prod -- --promote=${{ steps.build.outputs.built_version }}
+            ```
+
+            ### 🔗 Links
+            - [Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - [Docker Image](https://console.cloud.google.com/gcr/images/vi-operate-artifacts/us-central1/vi-operate-docker-repo/${{ env.IMAGE_NAME }})
+          draft: false
+          prerelease: ${{ contains(steps.build.outputs.built_version, '-rc') }}
+
+      - name: Notify build completion
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#builds'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          custom_payload: |
+            {
+              text: "Build ${{ job.status }}: ${{ steps.build.outputs.built_version || 'Failed' }}",
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : 'danger',
+                fields: [
+                  {
+                    title: 'Version',
+                    value: '${{ steps.build.outputs.built_version || "N/A" }}',
+                    short: true
+                  },
+                  {
+                    title: 'Type',
+                    value: '${{ contains(steps.build.outputs.built_version, "-rc") && "Release Candidate" || "Final Release" }}',
+                    short: true
+                  },
+                  {
+                    title: 'Image',
+                    value: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.built_version || "failed" }}',
+                    short: false
+                  },
+                  {
+                    title: 'Built by',
+                    value: '${{ github.actor }}',
+                    short: true
+                  },
+                  {
+                    title: 'Branch',
+                    value: '${{ github.ref_name }}',
+                    short: true
+                  }
+                ]
+              }]
+            }
+
+      - name: Output deployment instructions
+        if: success()
+        run: |
+          echo ""
+          echo "🎉 Build completed successfully!"
+          echo ""
+          echo "📦 Version: ${{ steps.build.outputs.built_version }}"
+          echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.built_version }}"
+          echo ""
+          echo "🚀 Deployment options:"
+          echo ""
+          if [[ "${{ steps.build.outputs.built_version }}" =~ -rc[0-9]+$ ]]; then
+            echo "  Staging (test RC):"
+            echo "    npm run deploy:staging -- --version=${{ steps.build.outputs.built_version }}"
+            echo ""
+            echo "  Production (promote RC):"
+            echo "    npm run deploy:prod -- --promote=${{ steps.build.outputs.built_version }}"
+          else
+            echo "  Staging:"
+            echo "    npm run deploy:staging -- --version=${{ steps.build.outputs.built_version }}"
+            echo ""
+            echo "  Production (rollback):"
+            echo "    npm run deploy:prod -- --rollback=${{ steps.build.outputs.built_version }}"
+          fi
+          echo ""
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker system prune -f || true
