@@ -6,7 +6,7 @@
  */
 
 import { Archetype, ArchetypeType } from "@/types/archetype";
-import { Source, SourceType } from "@/app/console/sources/_common/types/source";
+import { Source, SourceType } from "@/app/[console]/sources/_common/types/source";
 import { Status } from "@/types/common";
 
 /**

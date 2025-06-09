@@ -4,7 +4,7 @@
  * Single source of truth for all source connection icons
  */
 
-import { ConnectionOption } from '@/app/console/sources/_common/types/source';
+import { ConnectionOption } from '@/app/[console]/sources/_common/types/source';
 
 // Define all connection types with their respective icon configurations
 export const CONNECTION_ICONS: Record<string, ConnectionOption> = {

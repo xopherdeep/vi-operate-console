@@ -20,7 +20,7 @@ providers.push(
           id: '1',
           name: 'Demo User',
           email: 'demo@example.com',
-          image: 'https://placehold.co/34'
+          image: 'https://placehold.co/34/png'
         };
       }
       return null;

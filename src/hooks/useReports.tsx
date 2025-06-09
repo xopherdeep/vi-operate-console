@@ -1,4 +1,4 @@
-import { ReportsList, ScheduledReportsList } from '@/app/console/reports/lists';
+import { ReportsList, ScheduledReportsList } from '@/app/[console]/reports/lists';
 import { reportsMockData, scheduledReportsMockData, reportTabsMockData } from '@/lib/db/mock-data/reports';
 import { AutomationTab } from '@/types/automation';
 import { ReportViewModel, ScheduledReportCardProps, ReportTab } from '@/types/report';

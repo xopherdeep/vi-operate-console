@@ -1,0 +1,3 @@
+[submodule "wiki"]
+	path = wiki
+	url = git@github.com:vi-technologies/vi-operate-console.wiki.git

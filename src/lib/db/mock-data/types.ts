@@ -10,8 +10,8 @@ import {
   CampaignPerformanceDataPoint,
   AgentPerformanceDataPoint
 } from '@/types/charts';
-import { DashboardData } from '@/app/console/dashboards/_common/types/dashboard';
-import { SourceViewModel, ConnectionOption } from '@/app/console/sources/_common/types/source';
+import { DashboardData } from '@/app/[console]/dashboards/_common/types/dashboard';
+import { SourceViewModel, ConnectionOption } from '@/app/[console]/sources/_common/types/source';
 import { ReportViewModel, ScheduledReportCardProps, ReportTab } from '@/types/report';
 import { AutomationTab } from '@/app/console/automations/types/automation';
 

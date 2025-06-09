@@ -64,9 +64,9 @@ export function Layout({
 
   return (
     <div className={`flex flex-col ${className}`}>
-      <div className="flex justify-between items-center my-6">
+      <div className="flex justify-between items-center m-0 mb-6">
         <div>
-          <h1 className="text-3xl font-bold">{title}</h1>
+          <h1 className="text-3xl font-bold font-poppins">{title}</h1>
           {description && (
             <p className="text-muted-foreground mt-1">{description}</p>
           )}

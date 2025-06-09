@@ -1,4 +1,4 @@
-import { Tab } from '@/app/console/automations/_common/hooks/useAutomations';
+import { Tab } from '@/app/[console]/automations/_common/hooks/useAutomations';
 import {
   Tabs,
   TabsContent,

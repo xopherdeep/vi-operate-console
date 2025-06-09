@@ -1,5 +1,5 @@
 import { Button } from '@/ui/button';
-import { auth, signOut } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -10,7 +10,10 @@ import {
   DropdownMenuTrigger
 } from '@/ui/dropdown-menu';
 import Link from 'next/link';
+import { signOutAction } from './actions';
+import { useState } from 'react';
 
+// Original server component - not used directly in client components
 export async function User() {
   let session = await auth();
   let user = session?.user;
@@ -24,7 +27,7 @@ export async function User() {
           className="overflow-hidden rounded-full"
         >
           <Image
-            src={user?.image ?? 'https://placehold.co/34/png'}
+            src={user?.image ?? 'https://placehold.co/34'}
             width={36}
             height={36}
             alt="Avatar"
@@ -40,12 +43,7 @@ export async function User() {
         <DropdownMenuSeparator />
         {user ? (
           <DropdownMenuItem>
-            <form
-              action={async () => {
-                'use server';
-                await signOut();
-              }}
-            >
+            <form action={signOutAction}>
               <button type="submit">Sign Out</button>
             </form>
           </DropdownMenuItem>
@@ -54,6 +52,42 @@ export async function User() {
             <Link href="/login">Sign In</Link>
           </DropdownMenuItem>
         )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// Client-side version that doesn't use server-only APIs
+export function ClientUser() {
+  // This would ideally be fetched from an API endpoint
+  // For now using a placeholder avatar
+  
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className="overflow-hidden rounded-full"
+        >
+          <Image
+            src="https://placehold.co/36/png"
+            width={36}
+            height={36}
+            alt="Avatar"
+            className="overflow-hidden rounded-full"
+          />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>Settings</DropdownMenuItem>
+        <DropdownMenuItem>Support</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>
+          <Link href="/auth">Sign In/Out</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

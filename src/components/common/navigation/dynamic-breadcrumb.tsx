@@ -40,7 +40,7 @@ export function DynamicBreadcrumb() {
   // Base breadcrumbs: VI Operate > Console
   const baseCrumbs = [
     { name: 'VI Operate', href: '/' },
-    { name: 'Console', href: '/console' }
+    // { name: 'Console', href: '/console' }
   ];
 
   let additionalSegments = [...rawSegments];

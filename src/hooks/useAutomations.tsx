@@ -1,12 +1,4 @@
-import {
-  AgentsList,
-  ApiList,
-  CronsList,
-  DataList,
-  EventsList,
-  WorkflowsList
-} from '@/app/console/automations/_common/lists';
-import { automationTabsMockData } from '@/lib/mock-data';
+import { AgentsList, ApiList, CronsList, DataList, EventsList, WorkflowsList } from '@/app/[console]/automations/_common/components/lists';
 import { AutomationTab } from '@/types/automation';
 import React from 'react';
 

@@ -1,30 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { connectionOptionsMockData, sourcesConnectionsMockData } from '@/lib/db/mock-data/sources';
-import * as LucideIcons from 'lucide-react';
+import { connectionOptionsMockData } from '@/lib/db/mock-data/sources';
+import { renderIcon } from '@/lib/utils/renderIcon';
 import React from 'react';
 import { Source, SourceViewModel, ConnectionOption } from '@/types/source';
 import { IconData } from '@/types/common';
 import { sourceToViewModel, entitiesToViewModels } from '@/utils/transformers';
 import { validateSources } from '@/utils/validators';
-
-
-
-/**
- * Converts an IconData object to a React element
- * 
- * @param iconData - The icon data object to render
- * @returns A React element representing the icon
- */
-const renderIcon = (iconData: IconData): React.ReactNode => {
-  if (!iconData) return null;
-  
-  const IconComponent = (LucideIcons as Record<string, React.ComponentType<any>>)[iconData.type];
-  if (!IconComponent) return null;
-  
-  return React.createElement(IconComponent, iconData.props);
-};
 
 export function useSources() {
   const [sources, setSources] = useState<SourceViewModel[]>([]);

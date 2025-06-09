@@ -13,10 +13,10 @@ import { NavItem } from './nav-item';
 export default function DesktopNav() {
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-24 flex-col bg-background sm:flex nav">
-      <nav className="flex flex-col items-center gap-8 px-2 sm:py-5">
+      <nav className="flex flex-col items-center gap-8 px-2 py-0">
         <Link
           href="/"
-          className="group flex h-14 w-14 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground"
+          className="mt-3 mb-6 group flex h-14 w-14 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground"
         >
           {/* <span className="font-poppins font-bold text-white text-xl">VI</span> */}
           <img src="/assets/images/Logo.svg" alt="logo" />

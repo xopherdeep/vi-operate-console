@@ -16,7 +16,7 @@ import {
   Source,
   SourceViewModel,
   SourceType
-} from '@/app/console/sources/_common/types/source';
+} from '@/app/[console]/sources/_common/types/source';
 import {
   Automation,
   AutomationType,
