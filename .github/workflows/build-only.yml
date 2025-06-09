@@ -31,6 +31,9 @@ env:
 jobs:
   build-version:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed for git operations (tags, commits)
+      id-token: write  # Required for OIDC authentication to GCP
     outputs:
       built_version: ${{ steps.build.outputs.built_version }}
       image_tag: ${{ steps.build.outputs.image_tag }}
