@@ -228,17 +228,17 @@ jobs:
                 fields: [
                   {
                     title: 'Version',
-                    value: '${{ steps.build.outputs.built_version || "N/A" }}',
+                    value: '${{ steps.build.outputs.built_version || 'N/A' }}',
                     short: true
                   },
                   {
                     title: 'Type',
-                    value: '${{ contains(steps.build.outputs.built_version, "-rc") && "Release Candidate" || "Final Release" }}',
+                    value: '${{ contains(steps.build.outputs.built_version, '-rc') && 'Release Candidate' || 'Final Release' }}',
                     short: true
                   },
                   {
                     title: 'Image',
-                    value: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.built_version || "failed" }}',
+                    value: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.built_version || 'failed' }}',
                     short: false
                   },
                   {

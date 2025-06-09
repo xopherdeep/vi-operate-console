@@ -156,7 +156,7 @@ jobs:
                   },
                   {
                     title: 'Version',
-                    value: '${{ steps.deployment.outputs.current_tag || inputs.version || "auto-generated" }}',
+                    value: '${{ steps.deployment.outputs.current_tag || inputs.version || 'auto-generated' }}',
                     short: true
                   },
                   {
