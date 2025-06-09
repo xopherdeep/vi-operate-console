@@ -236,10 +236,11 @@ jobs:
       - name: Notify deployment success
         if: success()
         uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         with:
           status: success
           channel: '#production-deployments'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
           custom_payload: |
             {
               text: "🚀 Production Deployment Successful",
@@ -283,10 +284,11 @@ jobs:
       - name: Notify deployment failure
         if: failure()
         uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         with:
           status: failure
           channel: '#production-deployments'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
           custom_payload: |
             {
               text: "❌ Production Deployment Failed",

@@ -232,10 +232,11 @@ jobs:
       - name: Notify build completion
         if: always()
         uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         with:
           status: ${{ job.status }}
           channel: '#claude-testing'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
           custom_payload: |
             {
               text: "Build ${{ job.status }}: ${{ steps.build.outputs.built_version || 'Failed' }}",
