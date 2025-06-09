@@ -174,8 +174,9 @@ jobs:
 
           # Push git tags if requested
           if [ "${{ inputs.push_tags }}" = "true" ]; then
-            git push origin ${VERSION}
-            echo "✅ Pushed git tag: ${VERSION}"
+            git push origin HEAD          # ← Push the new commit to the branch
+            git push origin ${VERSION}     # ← Push the tag
+            echo "✅ Pushed git commit and tag: ${VERSION}"
           fi
 
           # Set outputs
