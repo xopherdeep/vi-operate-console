@@ -245,9 +245,11 @@ class VersionManager {
    */
   getLatestTag() {
     try {
-      const output = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' });
-      return output.trim();
+      const output = execSync('git tag -l "v*" --sort=-version:refname', { encoding: 'utf8' });
+      const tags = output.trim().split('\n').filter(tag => tag.length > 0);
+      return tags.length > 0 ? tags[0] : null;
     } catch (error) {
+      console.warn('Warning: Could not fetch git tags:', error.message);
       return null;
     }
   }
