@@ -67,10 +67,12 @@ jobs:
 
       # Authenticate to Google Cloud using Workload Identity Federation (no secrets needed!)
       - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: projects/vi-operate-iac-control/locations/global/workloadIdentityPools/github-actions-pool/providers/github-oidc
-          service_account: github-actions-development@vi-operate-dev.iam.gserviceaccount.com
+          workload_identity_provider: projects/1072731311282/locations/global/workloadIdentityPools/github-actions-pool/providers/github-oidc
+          service_account: github-actions-build@vi-operate-dev.iam.gserviceaccount.com
+          audience: sts.googleapis.com
           token_format: access_token
 
       - name: Setup Google Cloud CLI
