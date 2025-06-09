@@ -83,6 +83,7 @@ jobs:
         with:
           workload_identity_provider: projects/1072731311282/locations/global/workloadIdentityPools/github-actions-pool/providers/github-oidc
           service_account: github-actions-build@vi-operate-artifacts.iam.gserviceaccount.com
+          audience: sts.googleapis.com
           token_format: access_token
 
       - name: Setup Google Cloud CLI
