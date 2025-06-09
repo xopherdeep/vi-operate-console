@@ -97,7 +97,7 @@ jobs:
         run: |
           # Get credentials from gcloud (authenticated via Workload Identity)
           gcloud container clusters get-credentials vi-operate-cluster-dev \
-            --region=us-central1 \
+            --region=us-central1-a \
             --project=vi-operate-dev
           kubectl config current-context
 
