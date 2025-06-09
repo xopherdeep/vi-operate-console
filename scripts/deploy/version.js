@@ -116,9 +116,10 @@ class VersionManager {
     if (currentVersion) {
       version = this.parseVersion(currentVersion);
     } else {
-      // Get from package.json or default
+      // Get from package.json or default to 1.0.0
       const packageVersion = this.config.getCurrentPackageVersion();
-      version = this.parseVersion(`v${packageVersion}`);
+      const defaultVersion = packageVersion || '1.0.0';
+      version = this.parseVersion(`v${defaultVersion}`);
     }
 
     switch (incrementType) {

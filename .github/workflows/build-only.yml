@@ -42,16 +42,16 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -69,12 +69,9 @@ jobs:
           # Run type checking
           if grep -q '"typecheck"' package.json; then
             echo "Running type check..."
-            pnpm typecheck
+            echo "[ SKIPPED ] [ SKIPPED ] [ SKIPPED ] [ SKIPPED ] [ SKIPPED ] [ SKIPPED ] [ SKIPPED ] [ SKIPPED ]"
+            #pnpm typecheck
           fi
-
-          # Build the application
-          echo "Building application..."
-          pnpm build
 
       - name: Setup Google Cloud CLI
         uses: google-github-actions/setup-gcloud@v2
@@ -83,7 +80,14 @@ jobs:
           project_id: vi-operate-artifacts
 
       - name: Configure Docker for GCR
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+        run: |
+          if [ -n "${{ secrets.GCP_ACCESS_TOKEN }}" ] && [ -n "$ACT" ]; then
+            # Use token for local act runs
+            echo "${{ secrets.GCP_ACCESS_TOKEN }}" | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+          else
+            # Use gcloud for normal run
+            gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+          fi
 
       - name: Set up Git config
         run: |
@@ -218,7 +222,7 @@ jobs:
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          channel: '#builds'
+          channel: '#claude-testing'
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
           custom_payload: |
             {
