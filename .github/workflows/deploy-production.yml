@@ -149,6 +149,9 @@ jobs:
         with:
           project_id: vi-operate-prod
 
+      - name: Install GKE auth plugin
+        run: gcloud components install gke-gcloud-auth-plugin --quiet
+
       - name: Configure Docker for GCR
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
